@@ -1,0 +1,33 @@
+# .NET
+bin/
+obj/
+*.user
+*.suo
+.vs/
+TestResults/
+*.trx
+
+# Node / Angular
+node_modules/
+dist/
+.angular/
+coverage/
+
+# Ambiente e segredos (nunca versionar)
+.env
+.env.*
+!.env.example
+secrets/*
+!secrets/README.md
+*.pfx
+*.p12
+*.pem
+*.key
+appsettings.*.local.json
+
+# IDE / SO
+.idea/
+.vscode/*
+!.vscode/extensions.json
+.DS_Store
+Thumbs.db

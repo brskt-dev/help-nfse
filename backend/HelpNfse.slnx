@@ -1,0 +1,10 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/HelpNfse.Api/HelpNfse.Api.csproj" />
+    <Project Path="src/HelpNfse.Core/HelpNfse.Core.csproj" />
+    <Project Path="src/HelpNfse.Worker/HelpNfse.Worker.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/HelpNfse.Tests/HelpNfse.Tests.csproj" />
+  </Folder>
+</Solution>
