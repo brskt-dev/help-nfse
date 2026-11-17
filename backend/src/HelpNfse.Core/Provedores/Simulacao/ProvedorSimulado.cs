@@ -35,7 +35,7 @@ public sealed class ProvedorSimulado(
     ILogger<ProvedorSimulado> log) : IProvedorNfse
 {
     public const string NomeProvedor = "Simulacao";
-    public const int FalhasNoCenarioFalhaTemporaria = 2;
+    public const int FalhasNoCenarioFalhaTemporaria = 1;
     public const int ConsultasIndisponiveisNoCenario = 2;
 
     public string Nome => NomeProvedor;

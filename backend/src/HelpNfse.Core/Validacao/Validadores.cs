@@ -9,6 +9,7 @@ public static partial class Validadores
     public const decimal ValorMaximo = 999_999_999.99m;
     public const int TamanhoMaximoDescricao = 2000;
 
+    [GeneratedRegex(@"^\d{3}$")] private static partial Regex TresDigitos();
     [GeneratedRegex(@"^\d{6}$")] private static partial Regex SeisDigitos();
     [GeneratedRegex(@"^\d{7}$")] private static partial Regex SeteDigitos();
     [GeneratedRegex(@"^\d{8}$")] private static partial Regex OitoDigitos();
@@ -31,14 +32,14 @@ public static partial class Validadores
     {
         var erros = new List<string>();
 
-        if (nota.Valor is null) erros.Add("Informe o valor desta competência.");
+        if (nota.Valor is null) erros.Add("Informe o valor deste mês.");
         else ValidarValor(nota.Valor.Value, erros);
 
         ValidarTomador(nota.Tomador, erros);
         ValidarServico(nota.Servico, erros, exigirCodigos: true);
 
         foreach (var campo in Separar(nota.CamposPendentesDeRevisao))
-            erros.Add($"Revise o campo \"{NomeCampo(campo)}\" nesta competência.");
+            erros.Add($"Revise o campo \"{NomeCampo(campo)}\" neste mês.");
 
         return erros;
     }
@@ -91,6 +92,11 @@ public static partial class Validadores
         else if (!SeteDigitos().IsMatch(s.CodigoMunicipioPrestacao)) erros.Add("Código IBGE do município de prestação deve ter 7 dígitos.");
 
         if (s.AliquotaIss is { } a && (a < 0 || a > 100)) erros.Add("Alíquota do ISS deve estar entre 0 e 100%.");
+        if (!string.IsNullOrWhiteSpace(s.CstIbsCbs) && !TresDigitos().IsMatch(s.CstIbsCbs)) erros.Add("CST do IBS/CBS deve ter 3 dígitos.");
+        if (!string.IsNullOrWhiteSpace(s.ClassificacaoTributariaIbsCbs) && !SeisDigitos().IsMatch(s.ClassificacaoTributariaIbsCbs))
+            erros.Add("Classificação tributária do IBS/CBS (cClassTrib) deve ter 6 dígitos.");
+        if (!string.IsNullOrWhiteSpace(s.IndicadorOperacaoIbsCbs) && !SeisDigitos().IsMatch(s.IndicadorOperacaoIbsCbs))
+            erros.Add("Indicador de operação do IBS/CBS deve ter 6 dígitos.");
         if (s.InformacoesComplementares?.Length > TamanhoMaximoDescricao)
             erros.Add($"Informações complementares devem ter no máximo {TamanhoMaximoDescricao} caracteres.");
     }
@@ -171,6 +177,9 @@ public static partial class Validadores
         CodigoTributacaoMunicipal = Formatos.Limpar(s.CodigoTributacaoMunicipal),
         CodigoNbs = Formatos.Limpar(Formatos.ApenasDigitos(s.CodigoNbs)),
         CodigoMunicipioPrestacao = Formatos.Limpar(Formatos.ApenasDigitos(s.CodigoMunicipioPrestacao)),
+        CstIbsCbs = Formatos.Limpar(Formatos.ApenasDigitos(s.CstIbsCbs)),
+        ClassificacaoTributariaIbsCbs = Formatos.Limpar(Formatos.ApenasDigitos(s.ClassificacaoTributariaIbsCbs)),
+        IndicadorOperacaoIbsCbs = Formatos.Limpar(Formatos.ApenasDigitos(s.IndicadorOperacaoIbsCbs)),
         InformacoesComplementares = Formatos.Limpar(s.InformacoesComplementares),
     };
 }

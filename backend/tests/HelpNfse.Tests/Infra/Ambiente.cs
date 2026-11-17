@@ -92,7 +92,7 @@ public sealed class Ambiente : IAsyncDisposable
     }
 
     public Task<RecorrenciaDto> CriarRecorrenciaAsync(string nome, CamposVariaveis variaveis = CamposVariaveis.Nenhum,
-        string descricao = "Serviço mensal {competencia}") =>
+        string descricao = "Serviço mensal {competencia}", ReferenciaServico referencia = ReferenciaServico.MesAnterior) =>
         Com<RecorrenciaServico, RecorrenciaDto>(s => s.CriarAsync(new SalvarRecorrenciaDto(
             $"Rec {nome}",
             new DadosTomador { Documento = CnpjValido(), Nome = nome },
@@ -101,7 +101,7 @@ public sealed class Ambiente : IAsyncDisposable
                 Descricao = descricao, CodigoTributacaoNacional = "010101", CodigoMunicipioPrestacao = "3550308",
                 TributacaoIssqn = TributacaoIssqn.OperacaoTributavel,
             },
-            variaveis, null, null), default));
+            variaveis, referencia, null, null), default));
 
     public Task<CompetenciaDto> AbrirAsync(int ano = 2026, int mes = 11) =>
         Com<CompetenciaServico, CompetenciaDto>(s => s.AbrirAsync(ano, mes, default));
@@ -121,7 +121,7 @@ public sealed class Ambiente : IAsyncDisposable
         await using var db = NovoDb();
         var n = await db.Notas.SingleAsync(x => x.Id == notaId);
         await Com<NotaServico>(s => s.AtualizarAsync(notaId,
-            new AtualizarNotaDto(n.Versao, n.Valor, null, null, cenario, null, null, null), default));
+            new AtualizarNotaDto(n.Versao, n.Valor, null, null, null, cenario, null, null, null), default));
     }
 
     public Task<ResultadoLoteDto> MarcarProntasAsync(params long[] ids) =>

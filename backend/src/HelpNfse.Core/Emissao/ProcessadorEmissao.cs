@@ -306,7 +306,15 @@ public sealed class ProcessadorEmissao(
 
             case ResultadoEnvio.FalhaTemporaria f:
                 trabalho.FalhasTemporarias++;
-                if (trabalho.FalhasTemporarias >= Op.MaxFalhasTemporarias)
+                if (!Op.ReenvioAutomatico)
+                {
+                    // Reenvio manual: o usuário decide quando tentar de novo.
+                    nota.Situacao = SituacaoNota.Erro;
+                    nota.UltimaMensagem = $"Falha temporária no serviço ({f.Detalhe}). Nenhuma nota foi emitida. "
+                                          + "Para reenviar, marque como pronta e emita novamente.";
+                    Liberar(trabalho, StatusTrabalho.Concluido, agora, "Falha temporária; aguardando reenvio manual.");
+                }
+                else if (trabalho.FalhasTemporarias >= Op.MaxFalhasTemporarias)
                 {
                     nota.Situacao = SituacaoNota.Erro;
                     nota.UltimaMensagem = $"Serviço indisponível após {trabalho.FalhasTemporarias} tentativas ({f.Detalhe}). "
@@ -387,7 +395,15 @@ public sealed class ProcessadorEmissao(
 
             case ResultadoConsulta.NaoEncontrada:
                 var liberadoEm = (ultimoEnvio?.IniciadaEm ?? agora) + Op.JanelaMinimaReenvio;
-                if (tentativa.IniciadaEm >= liberadoEm)
+                if (tentativa.IniciadaEm >= liberadoEm && !Op.ReenvioAutomatico)
+                {
+                    // Inexistência confirmada: nada foi emitido. Reenvio manual (mesmo identificador de DPS).
+                    nota.Situacao = SituacaoNota.Erro;
+                    nota.UltimaMensagem = "A consulta confirmou que a nota NÃO foi emitida. Para reenviar, marque como pronta "
+                                          + "e emita novamente (o mesmo número de DPS será usado).";
+                    Liberar(trabalho, StatusTrabalho.Concluido, agora, "Inexistência confirmada; aguardando reenvio manual.");
+                }
+                else if (tentativa.IniciadaEm >= liberadoEm)
                 {
                     // Inexistência confirmada fora da janela de processamento: reenvio seguro com o mesmo identificador.
                     nota.Situacao = SituacaoNota.Processando;

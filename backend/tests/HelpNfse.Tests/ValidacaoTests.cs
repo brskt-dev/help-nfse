@@ -18,7 +18,7 @@ public class ValidacaoTests(PostgresServidor servidor) : TesteComBanco(servidor)
         var r = await A.MarcarProntasAsync(comp.Linhas[0].Id);
 
         Assert.Equal(1, r.Falhas);
-        Assert.Contains("Informe o valor desta competência.", r.Itens[0].Erros);
+        Assert.Contains("Informe o valor deste mês.", r.Itens[0].Erros);
         Assert.Equal(SituacaoNota.Pendente, (await A.NotaAsync(comp.Linhas[0].Id)).Situacao);
     }
 
@@ -35,7 +35,7 @@ public class ValidacaoTests(PostgresServidor servidor) : TesteComBanco(servidor)
 
         var nota = await A.NotaAsync(id);
         await A.Com<NotaServico>(s => s.AtualizarAsync(id,
-            new AtualizarNotaDto(nota.Versao, 10m, "Serviço de novembro/2026 — revisado", null, null, null, null, null), default));
+            new AtualizarNotaDto(nota.Versao, 10m, null, "Serviço de novembro/2026 — revisado", null, null, null, null, null), default));
         var depois = await A.MarcarProntasAsync(id);
 
         Assert.Equal(1, depois.Sucessos);
@@ -50,7 +50,7 @@ public class ValidacaoTests(PostgresServidor servidor) : TesteComBanco(servidor)
         var nota = await A.NotaAsync(comp.Linhas[0].Id);
 
         await A.Com<NotaServico>(s => s.AtualizarAsync(nota.Id,
-            new AtualizarNotaDto(nota.Versao, 10m, "Tentativa de alterar", null, null, null, null, null), default));
+            new AtualizarNotaDto(nota.Versao, 10m, null, "Tentativa de alterar", null, null, null, null, null), default));
 
         Assert.Equal("Descrição fixa", (await A.NotaAsync(nota.Id)).Servico.Descricao);
     }

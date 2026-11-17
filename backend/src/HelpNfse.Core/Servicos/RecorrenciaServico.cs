@@ -14,7 +14,7 @@ public sealed class RecorrenciaServico(AppDbContext db, TimeProvider relogio)
         if (!incluirInativas) q = q.Where(r => r.Ativa);
         var lista = await q.OrderByDescending(r => r.Ativa).ThenBy(r => r.Identificacao).ToListAsync(ct);
         return lista.Select(r => new RecorrenciaResumoDto(r.Id, r.Identificacao, r.Ativa, r.Tomador.Nome,
-            r.Tomador.Documento, r.Servico.Descricao, r.CamposVariaveis, r.AtualizadaEm)).ToList();
+            r.Tomador.Documento, r.Servico.Descricao, r.CamposVariaveis, r.ReferenciaServico, r.AtualizadaEm)).ToList();
     }
 
     public async Task<RecorrenciaDto> ObterAsync(long id, CancellationToken ct)
@@ -24,11 +24,11 @@ public sealed class RecorrenciaServico(AppDbContext db, TimeProvider relogio)
         var historico = await db.Notas.AsNoTracking()
             .Where(n => n.RecorrenciaId == id)
             .OrderByDescending(n => n.Competencia!.Ano).ThenByDescending(n => n.Competencia!.Mes)
-            .Select(n => new HistoricoRecorrenciaDto(n.Id, n.Competencia!.Ano, n.Competencia.Mes, n.Valor, n.Situacao,
+            .Select(n => new HistoricoRecorrenciaDto(n.Id, n.Competencia!.Ano, n.Competencia.Mes, n.MesReferencia, n.Valor, n.Situacao,
                 n.NumeroNfse, n.EmitidaEm))
             .ToListAsync(ct);
         return new RecorrenciaDto(r.Id, r.Identificacao, r.Ativa, r.Tomador, r.Servico, r.CamposVariaveis,
-            r.Observacoes, r.CriadaEm, r.AtualizadaEm, r.DesativadaEm, r.Versao, historico);
+            r.ReferenciaServico, r.Observacoes, r.CriadaEm, r.AtualizadaEm, r.DesativadaEm, r.Versao, historico);
     }
 
     public async Task<RecorrenciaDto> CriarAsync(SalvarRecorrenciaDto dto, CancellationToken ct)
@@ -69,6 +69,7 @@ public sealed class RecorrenciaServico(AppDbContext db, TimeProvider relogio)
         r.Tomador = Validadores.NormalizarTomador(dto.Tomador ?? new());
         r.Servico = Validadores.NormalizarServico(dto.Servico ?? new());
         r.CamposVariaveis = dto.CamposVariaveis;
+        r.ReferenciaServico = dto.ReferenciaServico;
         r.Observacoes = Formatos.Limpar(dto.Observacoes);
         r.AtualizadaEm = agora;
 

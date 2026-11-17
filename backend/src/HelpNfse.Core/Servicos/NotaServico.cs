@@ -25,7 +25,7 @@ public sealed class NotaServico(AppDbContext db, TimeProvider relogio, IProvedor
         DadosDps? dps = n.DpsJson is null ? null : JsonSerializer.Deserialize<DadosDps>(n.DpsJson, JsonOpcoes.Padrao);
         return new NotaDetalheDto(
             n.Id, n.CompetenciaId, n.Competencia!.Ano, n.Competencia.Mes, n.Origem, n.RecorrenciaId, n.Identificacao,
-            n.Tomador, n.Servico, n.CamposVariaveis, n.CamposPendentesDeRevisao, n.Valor, anterior, n.Situacao,
+            n.Tomador, n.Servico, n.CamposVariaveis, n.CamposPendentesDeRevisao, n.MesReferencia, n.Valor, anterior, n.Situacao,
             n.MotivoIgnorada, n.UltimaMensagem, CompetenciaServico.Pendencias(n), n.CenarioSimulacao, n.SerieDps,
             n.NumeroDps, n.IdentificadorDps, n.DataCompetencia, dps, n.NumeroNfse, n.ChaveAcesso, n.EmitidaEm,
             n.EmissaoSimulada, n.Situacao == SituacaoNota.Emitida, n.XmlAutorizado is not null,
@@ -62,7 +62,8 @@ public sealed class NotaServico(AppDbContext db, TimeProvider relogio, IProvedor
 
     public async Task<NotaDetalheDto> AtualizarAsync(long id, AtualizarNotaDto dto, CancellationToken ct)
     {
-        var n = await db.Notas.SingleOrDefaultAsync(x => x.Id == id, ct) ?? throw ErroNegocio.NaoEncontrado("Nota");
+        var n = await db.Notas.Include(x => x.Competencia).SingleOrDefaultAsync(x => x.Id == id, ct)
+                ?? throw ErroNegocio.NaoEncontrado("Nota");
         GarantirEditavel(n);
         db.Entry(n).Property(x => x.Versao).OriginalValue = dto.Versao;
 
@@ -70,30 +71,38 @@ public sealed class NotaServico(AppDbContext db, TimeProvider relogio, IProvedor
         if (dto.Valor is { } v) Validadores.ValidarValor(v, erros);
         n.Valor = dto.Valor;
 
+        // O mês de referência do serviço pode ser ajustado em qualquer linha editável.
+        if (dto.MesReferencia is { } mr) n.MesReferencia = new DateOnly(mr.Year, mr.Month, 1);
+
         if (n.Origem == OrigemNota.Avulsa)
         {
             if (dto.Identificacao is not null) n.Identificacao = dto.Identificacao.Trim();
             if (dto.Tomador is not null) n.Tomador = Validadores.NormalizarTomador(dto.Tomador);
-            if (dto.Servico is not null) n.Servico = Validadores.NormalizarServico(dto.Servico);
+            if (dto.Servico is not null)
+            {
+                n.Servico = Validadores.NormalizarServico(dto.Servico);
+                n.DescricaoModelo = n.Servico.Descricao;
+                n.InformacoesComplementaresModelo = n.Servico.InformacoesComplementares;
+            }
             if (string.IsNullOrWhiteSpace(n.Identificacao)) erros.Add("Informe a identificação.");
             Validadores.ValidarTomador(n.Tomador, erros);
-            Validadores.ValidarServico(n.Servico, erros, exigirCodigos: false);
         }
         else
         {
             // Linhas de recorrência: somente os campos marcados como variáveis são editáveis.
             if (n.CamposVariaveis.HasFlag(CamposVariaveis.Descricao) && dto.Descricao is not null)
             {
-                n.Servico = n.Servico with { Descricao = dto.Descricao.Trim() };
+                n.DescricaoModelo = dto.Descricao.Trim();
                 n.CamposRevisados |= CamposVariaveis.Descricao;
             }
             if (n.CamposVariaveis.HasFlag(CamposVariaveis.InformacoesComplementares) && dto.InformacoesComplementares is not null)
             {
-                n.Servico = n.Servico with { InformacoesComplementares = Formatos.Limpar(dto.InformacoesComplementares) };
+                n.InformacoesComplementaresModelo = Formatos.Limpar(dto.InformacoesComplementares);
                 n.CamposRevisados |= CamposVariaveis.InformacoesComplementares;
             }
-            Validadores.ValidarServico(n.Servico, erros, exigirCodigos: false);
         }
+        CompetenciaServico.ResolverTextos(n, n.Competencia!.Ano, n.Competencia.Mes);
+        Validadores.ValidarServico(n.Servico, erros, exigirCodigos: false);
 
         if (provedor.Simulado && dto.CenarioSimulacao is { } c) n.CenarioSimulacao = c;
         if (erros.Count > 0) throw new ErroNegocio("Verifique os dados da nota.", 400, erros);
@@ -137,7 +146,7 @@ public sealed class NotaServico(AppDbContext db, TimeProvider relogio, IProvedor
         return await EmLoteAsync(dto.Ids, notas, n =>
         {
             if (!PodeEditar(n)) return [MensagemSituacao(n)];
-            if (!anteriores.TryGetValue(n.Id, out var va)) return ["Não há valor em competência anterior."];
+            if (!anteriores.TryGetValue(n.Id, out var va)) return ["Não há valor em mês anterior."];
             if (n.Valor == va.Valor) return [];
             if (n.Valor is not null && !dto.Sobrescrever) return ["A linha já possui valor; não foi sobrescrito."];
             n.Valor = va.Valor;
@@ -206,19 +215,26 @@ public sealed class NotaServico(AppDbContext db, TimeProvider relogio, IProvedor
         var comp = await db.Competencias.SingleOrDefaultAsync(c => c.Id == competenciaId, ct)
                    ?? throw ErroNegocio.NaoEncontrado("Competência");
         var agora = relogio.GetUtcNow();
+        var servico = Validadores.NormalizarServico(dto.Servico ?? new());
         var n = new Nota
         {
             CompetenciaId = comp.Id,
             Origem = OrigemNota.Avulsa,
             Identificacao = (dto.Identificacao ?? "").Trim(),
             Tomador = Validadores.NormalizarTomador(dto.Tomador ?? new()),
-            Servico = Validadores.NormalizarServico(dto.Servico ?? new()),
+            Servico = servico,
+            DescricaoModelo = servico.Descricao,
+            InformacoesComplementaresModelo = servico.InformacoesComplementares,
+            MesReferencia = dto.MesReferencia is { } mr
+                ? new DateOnly(mr.Year, mr.Month, 1)
+                : ModeloDescricao.Referencia(ReferenciaServico.MesAnterior, comp.Ano, comp.Mes),
             Valor = dto.Valor,
             Situacao = SituacaoNota.Pendente,
             CenarioSimulacao = provedor.Simulado ? dto.CenarioSimulacao ?? CenarioSimulacao.Sucesso : CenarioSimulacao.Sucesso,
             CriadaEm = agora,
             AtualizadaEm = agora,
         };
+        CompetenciaServico.ResolverTextos(n, comp.Ano, comp.Mes);
         var erros = new List<string>();
         if (string.IsNullOrWhiteSpace(n.Identificacao)) erros.Add("Informe a identificação.");
         if (n.Valor is { } v) Validadores.ValidarValor(v, erros);
@@ -253,9 +269,13 @@ public sealed class NotaServico(AppDbContext db, TimeProvider relogio, IProvedor
         var nova = CompetenciaServico.CriarLinha(r, n.Competencia!, relogio.GetUtcNow());
         n.Identificacao = nova.Identificacao;
         n.Tomador = nova.Tomador;
-        n.Servico = nova.Servico;
+        n.Servico = r.Servico.Copiar();
+        n.DescricaoModelo = nova.DescricaoModelo;
+        n.InformacoesComplementaresModelo = nova.InformacoesComplementaresModelo;
         n.CamposVariaveis = nova.CamposVariaveis;
         n.CamposRevisados = CamposVariaveis.Nenhum;
+        // Mantém o mês de referência já definido na linha.
+        CompetenciaServico.ResolverTextos(n, n.Competencia!.Ano, n.Competencia.Mes);
         MarcarEditada(n);
         await SalvarAsync(ct);
         return await ObterAsync(id, ct);
@@ -329,7 +349,7 @@ public sealed class NotaServico(AppDbContext db, TimeProvider relogio, IProvedor
         }
         catch (DbUpdateConcurrencyException)
         {
-            throw ErroNegocio.Conflito("A nota foi alterada por outra operação. Recarregue a competência e tente novamente.");
+            throw ErroNegocio.Conflito("A nota foi alterada por outra operação. Recarregue a página e tente novamente.");
         }
     }
 }

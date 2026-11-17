@@ -61,8 +61,11 @@ public sealed record DadosDps
     public required string Serie { get; init; }
     public required long Numero { get; init; }
     public required DateOnly DataCompetencia { get; init; }
+    /// <summary>Mês de emissão no app (organização interna).</summary>
     public required int CompetenciaAno { get; init; }
     public required int CompetenciaMes { get; init; }
+    /// <summary>Mês de referência do serviço (primeiro dia). Informação interna; não é campo da DPS.</summary>
+    public DateOnly? MesReferenciaServico { get; init; }
     public required DateTimeOffset ConfirmadaEm { get; init; }
     public required PrestadorDps Prestador { get; init; }
     public required DadosTomador Tomador { get; init; }

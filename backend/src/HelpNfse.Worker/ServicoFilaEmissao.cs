@@ -95,5 +95,8 @@ public sealed class InterruptorProcessoReal(IOptions<OpcoesSimulacao> opcoes, IL
         if (!opcoes.Value.PermitirInterrupcaoReal) throw new InterrupcaoSimuladaException();
         log.LogCritical("SIMULAÇÃO: encerrando o processo do worker abruptamente (cenário InterromperWorker).");
         System.Diagnostics.Process.GetCurrentProcess().Kill();
+        // Como PID 1 de um container sem init, o próprio SIGKILL é ignorado pelo kernel: encerra de outra forma.
+        Thread.Sleep(TimeSpan.FromSeconds(2));
+        Environment.FailFast("SIMULAÇÃO: interrupção do worker (cenário InterromperWorker).");
     }
 }

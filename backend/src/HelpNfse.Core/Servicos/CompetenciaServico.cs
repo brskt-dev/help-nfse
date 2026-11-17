@@ -67,18 +67,17 @@ public sealed class CompetenciaServico(AppDbContext db, TimeProvider relogio)
 
     internal static Nota CriarLinha(Recorrencia r, Competencia comp, DateTimeOffset agora)
     {
-        var servico = r.Servico.Copiar();
-        servico.Descricao = ModeloDescricao.Aplicar(servico.Descricao, comp.Ano, comp.Mes);
-        if (servico.InformacoesComplementares is { } info)
-            servico.InformacoesComplementares = ModeloDescricao.Aplicar(info, comp.Ano, comp.Mes);
-        return new Nota
+        var n = new Nota
         {
             CompetenciaId = comp.Id,
             RecorrenciaId = r.Id,
             Origem = OrigemNota.Recorrencia,
             Identificacao = r.Identificacao,
             Tomador = r.Tomador.Copiar(),
-            Servico = servico,
+            Servico = r.Servico.Copiar(),
+            DescricaoModelo = r.Servico.Descricao,
+            InformacoesComplementaresModelo = r.Servico.InformacoesComplementares,
+            MesReferencia = ModeloDescricao.Referencia(r.ReferenciaServico, comp.Ano, comp.Mes),
             CamposVariaveis = r.CamposVariaveis,
             CamposRevisados = CamposVariaveis.Nenhum,
             Valor = null,
@@ -86,6 +85,19 @@ public sealed class CompetenciaServico(AppDbContext db, TimeProvider relogio)
             CenarioSimulacao = CenarioSimulacao.Sucesso,
             CriadaEm = agora,
             AtualizadaEm = agora,
+        };
+        ResolverTextos(n, comp.Ano, comp.Mes);
+        return n;
+    }
+
+    /// <summary>Recalcula descrição e informações complementares a partir do texto-fonte e dos meses da linha.</summary>
+    internal static void ResolverTextos(Nota n, int anoEmissao, int mesEmissao)
+    {
+        n.Servico = n.Servico with
+        {
+            Descricao = ModeloDescricao.Aplicar(n.DescricaoModelo ?? n.Servico.Descricao, anoEmissao, mesEmissao, n.MesReferencia) ?? "",
+            InformacoesComplementares = ModeloDescricao.Aplicar(
+                n.InformacoesComplementaresModelo ?? n.Servico.InformacoesComplementares, anoEmissao, mesEmissao, n.MesReferencia),
         };
     }
 
@@ -108,7 +120,7 @@ public sealed class CompetenciaServico(AppDbContext db, TimeProvider relogio)
 
         var linhas = notas.Select(n => new LinhaDto(
             n.Id, n.Origem, n.RecorrenciaId, n.RecorrenciaId is { } rid && recAtivas.Contains(rid), n.Identificacao,
-            n.Tomador.Nome, n.Tomador.Documento, n.Servico.Descricao, n.Valor,
+            n.Tomador.Nome, n.Tomador.Documento, n.Servico.Descricao, n.MesReferencia, n.Valor,
             n.RecorrenciaId is { } r2 && anteriores.TryGetValue(r2, out var va) ? va : null,
             n.Situacao, n.UltimaMensagem, Pendencias(n), n.CamposVariaveis, n.CamposPendentesDeRevisao,
             n.CenarioSimulacao, n.NumeroNfse, n.EmitidaEm, tentativas.GetValueOrDefault(n.Id), n.Versao)).ToList();
@@ -124,8 +136,8 @@ public sealed class CompetenciaServico(AppDbContext db, TimeProvider relogio)
         n.Situacao is SituacaoNota.Pendente or SituacaoNota.Erro ? Validadores.ValidarNotaParaPronta(n) : [];
 
     /// <summary>
-    /// Valor da competência anterior: o último valor preenchido da mesma recorrência em uma competência
-    /// anterior (desconsiderando linhas ignoradas). Apenas referência; nunca é copiado automaticamente.
+    /// Valor anterior: o último valor preenchido da mesma recorrência em um mês de emissão anterior
+    /// (desconsiderando linhas ignoradas). Apenas referência; nunca é copiado automaticamente.
     /// </summary>
     internal static async Task<Dictionary<long, ValorAnteriorDto>> ValoresAnterioresAsync(
         AppDbContext db, List<long> recIds, int ano, int mes, CancellationToken ct)

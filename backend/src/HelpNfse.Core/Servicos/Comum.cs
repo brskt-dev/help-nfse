@@ -40,16 +40,44 @@ public static class Formatos
 }
 
 /// <summary>
-/// Substitui marcadores simples na descrição padrão de uma recorrência ao gerar a linha da competência.
-/// {competencia} → 11/2026, {mes_ano} → novembro/2026, {mes} → novembro, {ano} → 2026.
+/// Substitui marcadores na descrição/informações complementares ao gerar ou ajustar uma linha.
+/// Mês de referência do serviço: {mes_referencia} → outubro · {mes_ano_referencia} → outubro/2026 · {referencia} → 10/2026.
+/// Mês de emissão: {mes} → novembro · {mes_ano} → novembro/2026 · {competencia} → 11/2026 · {ano} → 2026.
+/// Mês anterior ao de emissão: {mes_anterior} → outubro · {competencia_anterior} → 10/2026.
+/// Marcador escrito em MAIÚSCULAS gera o texto em maiúsculas (ex.: {MES_REFERENCIA} → OUTUBRO).
 /// </summary>
-public static class ModeloDescricao
+public static partial class ModeloDescricao
 {
-    public static readonly string[] Marcadores = ["{competencia}", "{mes_ano}", "{mes}", "{ano}"];
+    [System.Text.RegularExpressions.GeneratedRegex(
+        @"\{(mes_ano_referencia|mes_referencia|referencia|competencia_anterior|competencia|mes_ano|mes_anterior|mes|ano)\}",
+        System.Text.RegularExpressions.RegexOptions.IgnoreCase)]
+    private static partial System.Text.RegularExpressions.Regex Marcador();
 
-    public static string Aplicar(string modelo, int ano, int mes) => modelo
-        .Replace("{competencia}", $"{mes:00}/{ano}", StringComparison.OrdinalIgnoreCase)
-        .Replace("{mes_ano}", Formatos.MesAno(ano, mes), StringComparison.OrdinalIgnoreCase)
-        .Replace("{mes}", Formatos.NomeMes(mes), StringComparison.OrdinalIgnoreCase)
-        .Replace("{ano}", ano.ToString(CultureInfo.InvariantCulture), StringComparison.OrdinalIgnoreCase);
+    public static DateOnly Referencia(Dominio.ReferenciaServico padrao, int anoEmissao, int mesEmissao) =>
+        padrao == Dominio.ReferenciaServico.MesmoMes ? new DateOnly(anoEmissao, mesEmissao, 1) : new DateOnly(anoEmissao, mesEmissao, 1).AddMonths(-1);
+
+    public static string? Aplicar(string? modelo, int anoEmissao, int mesEmissao, DateOnly referencia)
+    {
+        if (modelo is null) return null;
+        var anterior = new DateOnly(anoEmissao, mesEmissao, 1).AddMonths(-1);
+        return Marcador().Replace(modelo, m =>
+        {
+            var valor = m.Groups[1].Value.ToLowerInvariant() switch
+            {
+                "mes_referencia" => Formatos.NomeMes(referencia.Month),
+                "mes_ano_referencia" => Formatos.MesAno(referencia.Year, referencia.Month),
+                "referencia" => $"{referencia.Month:00}/{referencia.Year}",
+                "competencia" => $"{mesEmissao:00}/{anoEmissao}",
+                "mes_ano" => Formatos.MesAno(anoEmissao, mesEmissao),
+                "mes" => Formatos.NomeMes(mesEmissao),
+                "ano" => anoEmissao.ToString(CultureInfo.InvariantCulture),
+                "mes_anterior" => Formatos.NomeMes(anterior.Month),
+                "competencia_anterior" => $"{anterior.Month:00}/{anterior.Year}",
+                _ => m.Value,
+            };
+            var token = m.Groups[1].Value;
+            return token == token.ToUpperInvariant() ? valor.ToUpper(Formatos.PtBr) : valor;
+        });
+    }
 }
+

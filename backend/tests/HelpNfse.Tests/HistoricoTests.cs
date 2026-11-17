@@ -19,7 +19,7 @@ public class HistoricoTests(PostgresServidor servidor) : TesteComBanco(servidor)
 
         await A.Com<RecorrenciaServico>(s => s.AtualizarAsync(rec.Id, new SalvarRecorrenciaDto(
             rec.Identificacao, rec.Tomador with { Nome = "Cliente Renomeado" },
-            rec.Servico with { Descricao = "Descrição nova" }, rec.CamposVariaveis, null, rec.Versao), default));
+            rec.Servico with { Descricao = "Descrição nova" }, rec.CamposVariaveis, rec.ReferenciaServico, null, rec.Versao), default));
 
         var linha = (await A.ObterAsync()).Linhas.Single(l => l.Id == comp.Linhas[0].Id);
         Assert.Equal("Cliente Original", linha.TomadorNome);
@@ -32,7 +32,7 @@ public class HistoricoTests(PostgresServidor servidor) : TesteComBanco(servidor)
         var rec = await A.CriarRecorrenciaAsync("Cliente Original");
         var comp = await A.AbrirAsync();
         await A.Com<RecorrenciaServico>(s => s.AtualizarAsync(rec.Id, new SalvarRecorrenciaDto(
-            rec.Identificacao, rec.Tomador with { Nome = "Cliente Renomeado" }, rec.Servico, rec.CamposVariaveis, null, null), default));
+            rec.Identificacao, rec.Tomador with { Nome = "Cliente Renomeado" }, rec.Servico, rec.CamposVariaveis, rec.ReferenciaServico, null, null), default));
 
         var detalhe = await A.Com<NotaServico, NotaDetalheDto>(s => s.AtualizarDoCadastroAsync(comp.Linhas[0].Id, default));
 
@@ -70,7 +70,7 @@ public class HistoricoTests(PostgresServidor servidor) : TesteComBanco(servidor)
         var nota = await A.NotaAsync(notas[0]);
         var rec = await A.Com<RecorrenciaServico, RecorrenciaDto>(s => s.ObterAsync(nota.RecorrenciaId!.Value, default));
         await A.Com<RecorrenciaServico>(s => s.AtualizarAsync(rec.Id, new SalvarRecorrenciaDto(rec.Identificacao,
-            rec.Tomador with { Nome = "Outro Nome" }, rec.Servico, rec.CamposVariaveis, null, null), default));
+            rec.Tomador with { Nome = "Outro Nome" }, rec.Servico, rec.CamposVariaveis, rec.ReferenciaServico, null, null), default));
 
         var dps = JsonSerializer.Deserialize<DadosDps>((await A.NotaAsync(notas[0])).DpsJson!, JsonOpcoes.Padrao)!;
         Assert.Equal("Prestador Teste Ltda", dps.Prestador.RazaoSocial);

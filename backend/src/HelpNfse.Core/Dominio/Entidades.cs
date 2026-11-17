@@ -36,6 +36,8 @@ public class Recorrencia
     public DadosTomador Tomador { get; set; } = new();
     public DadosServico Servico { get; set; } = new();
     public CamposVariaveis CamposVariaveis { get; set; }
+    /// <summary>Mês de referência do serviço usado por padrão nas linhas geradas.</summary>
+    public ReferenciaServico ReferenciaServico { get; set; }
     public string? Observacoes { get; set; }
     public DateTimeOffset CriadaEm { get; set; }
     public DateTimeOffset AtualizadaEm { get; set; }
@@ -43,7 +45,10 @@ public class Recorrencia
     public uint Versao { get; set; }
 }
 
-/// <summary>Mês de referência (competência) aberto no sistema.</summary>
+/// <summary>
+/// Mês de EMISSÃO aberto no sistema (quando as notas saem). É por ele que o app organiza e exibe as notas.
+/// O mês em que o serviço foi prestado fica em <see cref="Nota.MesReferencia"/>.
+/// </summary>
 public class Competencia
 {
     public long Id { get; set; }
@@ -75,6 +80,13 @@ public class Nota
     public DadosServico Servico { get; set; } = new();
     public CamposVariaveis CamposVariaveis { get; set; }
     public CamposVariaveis CamposRevisados { get; set; }
+
+    /// <summary>Mês de referência do serviço (primeiro dia do mês). Pode diferir do mês de emissão.</summary>
+    public DateOnly MesReferencia { get; set; }
+    /// <summary>Texto-fonte da descrição, com marcadores; a descrição resolvida fica em Servico.Descricao.</summary>
+    public string? DescricaoModelo { get; set; }
+    /// <summary>Texto-fonte das informações complementares, com marcadores.</summary>
+    public string? InformacoesComplementaresModelo { get; set; }
 
     public decimal? Valor { get; set; }
     public SituacaoNota Situacao { get; set; } = SituacaoNota.Pendente;

@@ -46,6 +46,15 @@ public sealed record DadosServico
     /// <summary>Alíquota do ISS em percentual, quando aplicável. Informativa; o sistema não calcula tributos.</summary>
     public decimal? AliquotaIss { get; set; }
     public bool IssRetido { get; set; }
+
+    // Reforma Tributária (IBS/CBS): classificação informada na DPS. Os valores são apurados pelo sistema nacional.
+    /// <summary>CST do IBS/CBS (3 dígitos). A confirmar com o contador.</summary>
+    public string? CstIbsCbs { get; set; }
+    /// <summary>Código de classificação tributária do IBS/CBS — cClassTrib (6 dígitos). A confirmar com o contador.</summary>
+    public string? ClassificacaoTributariaIbsCbs { get; set; }
+    /// <summary>Indicador da operação (6 dígitos). A confirmar com o contador.</summary>
+    public string? IndicadorOperacaoIbsCbs { get; set; }
+
     public string? InformacoesComplementares { get; set; }
 
     public DadosServico Copiar() => this with { };

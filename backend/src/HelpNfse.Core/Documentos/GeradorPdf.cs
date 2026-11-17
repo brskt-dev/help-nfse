@@ -60,7 +60,9 @@ public static class GeradorPdf
                     r.ConstantItem(170).AlignRight().Column(cc =>
                     {
                         cc.Item().AlignRight().Text($"Número simulado: {nota.NumeroNfse}").Bold();
-                        cc.Item().AlignRight().Text($"Competência: {dps.CompetenciaMes:00}/{dps.CompetenciaAno}");
+                        cc.Item().AlignRight().Text($"Mês de emissão: {dps.CompetenciaMes:00}/{dps.CompetenciaAno}");
+                        if (dps.MesReferenciaServico is { } mr)
+                            cc.Item().AlignRight().Text($"Referência do serviço: {mr.Month:00}/{mr.Year}");
                         cc.Item().AlignRight().Text($"Emitida (simulação): {Formatos.DataHora(nota.EmitidaEm!.Value)}");
                     });
                 });
@@ -75,7 +77,7 @@ public static class GeradorPdf
                     Linha(t, "Chave simulada", nota.ChaveAcesso);
                     Linha(t, "Identificador da DPS", dps.IdentificadorDps);
                     Linha(t, "Série / número da DPS", $"{dps.Serie} / {dps.Numero}");
-                    Linha(t, "Data de competência", dps.DataCompetencia.ToString("dd/MM/yyyy"));
+                    Linha(t, "Data de competência (DPS)", dps.DataCompetencia.ToString("dd/MM/yyyy"));
                     Linha(t, "Provedor", "Simulador do help-nfse (sem comunicação com a NFS-e Nacional)");
                 });
                 Secao(c, "Prestador", t =>
@@ -104,6 +106,8 @@ public static class GeradorPdf
                     Linha(t, "Tributação do ISSQN", Rotulos.De(dps.Servico.TributacaoIssqn));
                     Linha(t, "Alíquota ISS informada", dps.Servico.AliquotaIss is { } a ? $"{a:0.##}%" : null);
                     Linha(t, "ISS retido", dps.Servico.IssRetido ? "Sim" : "Não");
+                    Linha(t, "IBS/CBS — CST / cClassTrib / ind. operação",
+                        $"{dps.Servico.CstIbsCbs ?? "—"} / {dps.Servico.ClassificacaoTributariaIbsCbs ?? "—"} / {dps.Servico.IndicadorOperacaoIbsCbs ?? "—"}");
                     Linha(t, "Informações complementares", dps.Servico.InformacoesComplementares);
                 });
                 c.Item().Background(Colors.Grey.Lighten4).Padding(8).Row(r =>

@@ -31,6 +31,16 @@ public enum CamposVariaveis
 }
 
 /// <summary>
+/// Mês de referência do serviço em relação ao mês de emissão (padrão da recorrência; cada linha pode ser ajustada).
+/// O app organiza e exibe tudo pelo mês de emissão; o mês de referência descreve quando o serviço foi prestado.
+/// </summary>
+public enum ReferenciaServico
+{
+    MesAnterior,
+    MesmoMes,
+}
+
+/// <summary>
 /// Opção pelo Simples Nacional do prestador. Códigos fiscais exatos devem ser conferidos no leiaute oficial da DPS
 /// e confirmados com o contador antes da homologação.
 /// </summary>
