@@ -1,0 +1,274 @@
+<div class="conteudo">
+  <!-- Navegação entre meses -->
+  <div class="navegacao">
+    <button mat-icon-button (click)="irPara(-1)" matTooltip="Mês anterior" aria-label="Mês anterior">
+      <mat-icon>chevron_left</mat-icon>
+    </button>
+    <button mat-button class="mes" [matMenuTriggerFor]="seletor">
+      <span class="mes-titulo">{{ titulo() }}</span>
+      <mat-icon iconPositionEnd>expand_more</mat-icon>
+    </button>
+    <button mat-icon-button (click)="irPara(1)" matTooltip="Próximo mês" aria-label="Próximo mês">
+      <mat-icon>chevron_right</mat-icon>
+    </button>
+    @if (!ehAtual()) {
+      <button mat-stroked-button (click)="irParaAtual()">Mês atual</button>
+    }
+    <span class="espaco"></span>
+    @if (comp()?.aberta) {
+      <span class="suave pequeno">Total da competência (sem ignoradas): <strong>{{ brl(total()) }}</strong></span>
+    }
+  </div>
+
+  <mat-menu #seletor="matMenu" class="menu-meses">
+    <div class="seletor" (click)="$event.stopPropagation()" (keydown)="$event.stopPropagation()" role="presentation">
+      <div class="seletor-ano">
+        <button mat-icon-button (click)="anoSeletor.set(anoSeletor() - 1)" aria-label="Ano anterior"><mat-icon>chevron_left</mat-icon></button>
+        <strong>{{ anoSeletor() }}</strong>
+        <button mat-icon-button (click)="anoSeletor.set(anoSeletor() + 1)" aria-label="Próximo ano"><mat-icon>chevron_right</mat-icon></button>
+      </div>
+      <div class="seletor-meses">
+        @for (mm of meses; track mm) {
+          <button
+            mat-button
+            [class.atual]="anoSeletor() === a() && mm === m()"
+            [class.aberto]="mesAberto(anoSeletor(), mm)"
+            (click)="irParaMes(anoSeletor(), mm)"
+          >
+            {{ nomeMes(mm).slice(0, 3) }}
+          </button>
+        }
+      </div>
+      <div class="suave pequeno legenda"><span class="ponto"></span> competência já aberta</div>
+    </div>
+  </mat-menu>
+
+  @if (carregando()) {
+    <mat-progress-bar mode="indeterminate" />
+  }
+  @if (erro()) {
+    <div class="cartao erro-texto">{{ erro() }} <button mat-button (click)="carregar()">Tentar novamente</button></div>
+  }
+
+  @if (comp(); as c) {
+    @if (!c.aberta) {
+      <div class="cartao vazio">
+        <mat-icon class="grande">event_note</mat-icon>
+        <h2>A competência {{ titulo() }} ainda não foi aberta</h2>
+        <p class="suave">
+          Ao abrir, serão geradas {{ c.recorrenciasAtivas }} linha(s) a partir das recorrências ativas, todas como
+          <strong>Pendente</strong> e <strong>sem valor</strong>. Nenhum valor é copiado automaticamente.
+        </p>
+        <button mat-flat-button (click)="abrir()" [disabled]="ocupado()">
+          <mat-icon>add_task</mat-icon> Abrir competência
+        </button>
+      </div>
+    } @else {
+      <!-- Resumo por situação -->
+      <div class="resumo">
+        @for (r of resumo(); track r.situacao) {
+          <button
+            class="chip s-{{ r.situacao }}"
+            [class.vazio]="r.quantidade === 0"
+            [class.ativo]="filtro() === r.situacao"
+            (click)="filtrar(r.situacao)"
+            [attr.aria-pressed]="filtro() === r.situacao"
+          >
+            <span class="rotulo">{{ rotuloSituacao[r.situacao] }}</span>
+            <span class="qtd">{{ r.quantidade }}</span>
+            <span class="tot">{{ brl(r.total) }}</span>
+          </button>
+        }
+      </div>
+
+      <!-- Barra de ações -->
+      <div class="acoes">
+        <mat-form-field class="busca">
+          <mat-icon matPrefix>search</mat-icon>
+          <input matInput placeholder="Buscar tomador, documento ou descrição" [ngModel]="busca()" (ngModelChange)="busca.set($event)" />
+        </mat-form-field>
+        <span class="espaco"></span>
+        @if (c.recorrenciasSemLinha > 0) {
+          <button mat-stroked-button (click)="abrir()" [disabled]="ocupado()" matTooltip="Inclui recorrências ativas criadas depois da abertura">
+            <mat-icon>playlist_add</mat-icon> Incluir {{ c.recorrenciasSemLinha }} recorrência(s) nova(s)
+          </button>
+        }
+        <button mat-stroked-button (click)="avulsa()"><mat-icon>note_add</mat-icon> Nota avulsa</button>
+        <button mat-flat-button class="emitir" (click)="emitir()" [disabled]="prontas().quantidade === 0">
+          <mat-icon>send</mat-icon> Emitir notas prontas ({{ prontas().quantidade }} · {{ brl(prontas().total) }})
+        </button>
+      </div>
+
+      @if (selecaoVisivel().length > 0) {
+        <div class="lote">
+          <strong>{{ selecaoVisivel().length }} selecionada(s)</strong>
+          <button mat-stroked-button (click)="copiarAnterior()" [disabled]="ocupado()" matTooltip="Copia o valor da competência anterior apenas nas linhas sem valor">
+            <mat-icon>content_copy</mat-icon> Copiar valor anterior
+          </button>
+          <button mat-stroked-button (click)="marcarProntas()" [disabled]="ocupado()" matTooltip="Somente linhas válidas são marcadas">
+            <mat-icon>task_alt</mat-icon> Marcar como prontas
+          </button>
+          <button mat-button [matMenuTriggerFor]="maisLote"><mat-icon>more_horiz</mat-icon> Mais</button>
+          <mat-menu #maisLote="matMenu">
+            <button mat-menu-item (click)="voltarPendente()"><mat-icon>undo</mat-icon> Voltar para pendente</button>
+            <button mat-menu-item (click)="ignorar()"><mat-icon>block</mat-icon> Ignorar neste mês</button>
+            <button mat-menu-item (click)="restaurar()"><mat-icon>restore</mat-icon> Restaurar ignoradas</button>
+            <button mat-menu-item (click)="alternarTodas(false)"><mat-icon>deselect</mat-icon> Limpar seleção</button>
+          </mat-menu>
+        </div>
+      }
+      @if (filtro(); as f) {
+        <div class="filtro-ativo pequeno">
+          Mostrando apenas: <strong>{{ rotuloSituacao[f] }}</strong>
+          <button mat-button (click)="filtro.set(null)">Mostrar todas</button>
+        </div>
+      }
+
+      <!-- Tabela -->
+      <div class="tabela-wrap cartao">
+        <table class="tabela">
+          <thead>
+            <tr>
+              <th class="sel">
+                <mat-checkbox
+                  [checked]="todasSelecionadas()"
+                  [indeterminate]="selecaoVisivel().length > 0 && !todasSelecionadas()"
+                  (change)="alternarTodas($event.checked)"
+                  aria-label="Selecionar todas"
+                />
+              </th>
+              <th>Tomador</th>
+              <th>Descrição</th>
+              <th class="num">Valor anterior</th>
+              <th class="num">Valor atual</th>
+              <th>Situação</th>
+              <th class="acao"><span class="cdk-visually-hidden">Ações</span></th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (l of linhas(); track l.id) {
+              <tr [class.selecionada]="selecionados().has(l.id)" [class.ignorada]="l.situacao === 'Ignorada'">
+                <td class="sel">
+                  <mat-checkbox [checked]="selecionados().has(l.id)" (change)="alternar(l.id, $event.checked)" [aria-label]="'Selecionar ' + l.tomadorNome" />
+                </td>
+                <td data-rotulo="Tomador" class="tomador">
+                  <button class="link" (click)="detalhes(l)">{{ l.tomadorNome }}</button>
+                  <div class="suave pequeno">
+                    {{ doc(l.tomadorDocumento) }}
+                    @if (l.origem === 'Avulsa') {
+                      <span class="tag">avulsa</span>
+                    } @else if (!l.recorrenciaAtiva) {
+                      <span class="tag" matTooltip="A recorrência foi desativada; a linha continua no histórico">recorrência inativa</span>
+                    }
+                    @if (l.cenarioSimulacao !== 'Sucesso') {
+                      <span class="tag sim" matTooltip="Cenário de simulação desta linha">{{ rotuloCenario[l.cenarioSimulacao] }}</span>
+                    }
+                  </div>
+                </td>
+                <td data-rotulo="Descrição" class="descricao">
+                  <span [matTooltip]="l.descricao" matTooltipShowDelay="400">{{ l.descricao }}</span>
+                </td>
+                <td data-rotulo="Valor anterior" class="num">
+                  @if (l.valorAnterior; as va) {
+                    <div class="anterior">
+                      <span>
+                        {{ brl(va.valor) }}
+                        <span class="suave pequeno">{{ mesCurto(va.ano, va.mes) }}</span>
+                      </span>
+                      @if (editavel(l) && l.valor !== va.valor) {
+                        <button mat-icon-button class="mini" (click)="copiarAnterior(l)" [matTooltip]="'Usar ' + brl(va.valor) + ' nesta competência'" [attr.aria-label]="'Usar valor anterior em ' + l.tomadorNome">
+                          <mat-icon>arrow_forward</mat-icon>
+                        </button>
+                      }
+                    </div>
+                  } @else {
+                    <span class="suave">—</span>
+                  }
+                </td>
+                <td data-rotulo="Valor atual" class="num">
+                  @if (editavel(l)) {
+                    <div class="campo-valor" [class.vazio]="l.valor === null">
+                      <span class="rs">R$</span>
+                      <input
+                        class="valor"
+                        inputmode="decimal"
+                        autocomplete="off"
+                        [value]="textoValor(l)"
+                        placeholder="0,00"
+                        (blur)="salvarValor(l, $event)"
+                        (keydown.enter)="proximo($event)"
+                        (focus)="$any($event.target).select()"
+                        [attr.aria-label]="'Valor de ' + l.tomadorNome"
+                      />
+                    </div>
+                  } @else {
+                    <strong>{{ brl(l.valor) }}</strong>
+                  }
+                </td>
+                <td data-rotulo="Situação" class="situacao-col">
+                  <app-situacao [situacao]="l.situacao" />
+                  @if (l.situacao === 'Emitida' && l.numeroNfse) {
+                    <div class="pequeno suave">Nº {{ l.numeroNfse }}</div>
+                  }
+                  @if (l.situacao === 'Erro' || l.situacao === 'ResultadoAConfirmar' || l.situacao === 'Processando') {
+                    <div class="pequeno msg" [class.erro-texto]="l.situacao === 'Erro'">{{ l.mensagem }}</div>
+                  }
+                  @if (l.situacao === 'Pendente' || l.situacao === 'Erro') {
+                    @for (p of l.pendencias.slice(0, 2); track p) {
+                      <div class="pequeno pendencia">• {{ p }}</div>
+                    }
+                    @if (l.pendencias.length > 2) {
+                      <div class="pequeno pendencia">+{{ l.pendencias.length - 2 }} pendência(s)</div>
+                    }
+                  }
+                </td>
+                <td class="acao">
+                  <button mat-icon-button [matMenuTriggerFor]="menuLinha" [matMenuTriggerData]="{ l: l }" [attr.aria-label]="'Ações de ' + l.tomadorNome">
+                    <mat-icon>more_vert</mat-icon>
+                  </button>
+                </td>
+              </tr>
+            } @empty {
+              <tr>
+                <td colspan="7" class="suave sem-linhas">Nenhuma linha {{ filtro() || busca() ? 'para o filtro atual' : 'nesta competência' }}.</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+  }
+</div>
+
+<mat-menu #menuLinha="matMenu">
+  <ng-template matMenuContent let-l="l">
+    <button mat-menu-item (click)="detalhes(l)"><mat-icon>visibility</mat-icon> Detalhes e histórico</button>
+    @if (editavel(l)) {
+      <button mat-menu-item (click)="detalhes(l, true)"><mat-icon>edit</mat-icon> Editar campos variáveis</button>
+      @if (l.valorAnterior) {
+        <button mat-menu-item (click)="copiarAnterior(l)"><mat-icon>content_copy</mat-icon> Copiar valor anterior</button>
+      }
+    }
+    @if (l.situacao === 'Pendente' || l.situacao === 'Erro') {
+      <button mat-menu-item (click)="marcarProntas(l)"><mat-icon>task_alt</mat-icon> Marcar como pronta</button>
+    }
+    @if (l.situacao === 'Pronta') {
+      <button mat-menu-item (click)="voltarPendente(l)"><mat-icon>undo</mat-icon> Voltar para pendente</button>
+    }
+    @if (editavel(l)) {
+      <button mat-menu-item (click)="ignorar(l)"><mat-icon>block</mat-icon> Ignorar neste mês</button>
+    }
+    @if (l.situacao === 'Ignorada') {
+      <button mat-menu-item (click)="restaurar(l)"><mat-icon>restore</mat-icon> Restaurar</button>
+    }
+    @if (l.situacao === 'ResultadoAConfirmar') {
+      <button mat-menu-item (click)="consultar(l)"><mat-icon>manage_search</mat-icon> Consultar novamente</button>
+    }
+    @if (l.situacao === 'Emitida') {
+      <button mat-menu-item (click)="pdf(l)"><mat-icon>picture_as_pdf</mat-icon> Baixar PDF (simulação)</button>
+    }
+    @if (l.origem === 'Avulsa' && editavel(l) && l.tentativas === 0) {
+      <button mat-menu-item (click)="excluir(l)"><mat-icon>delete</mat-icon> Excluir nota avulsa</button>
+    }
+  </ng-template>
+</mat-menu>

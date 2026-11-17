@@ -1,0 +1,247 @@
+@if (nota(); as n) {
+  <div class="cabecalho" mat-dialog-title>
+    <div>
+      <div class="titulo">{{ n.tomador.nome }}</div>
+      <div class="suave pequeno">
+        {{ n.identificacao }} · competência {{ mesCurto(n.ano, n.mes) }} · {{ n.origem === 'Avulsa' ? 'nota avulsa' : 'recorrência' }}
+      </div>
+    </div>
+    <app-situacao [situacao]="n.situacao" />
+    <button mat-icon-button mat-dialog-close aria-label="Fechar"><mat-icon>close</mat-icon></button>
+  </div>
+
+  <mat-dialog-content>
+    @if (n.situacao === 'Processando' || n.situacao === 'ResultadoAConfirmar') {
+      <mat-progress-bar mode="indeterminate" />
+    }
+    @if (n.mensagem && n.situacao !== 'Emitida') {
+      <div class="aviso" [class.erro]="n.situacao === 'Erro'" [class.alerta]="n.situacao === 'ResultadoAConfirmar'">
+        <mat-icon>{{ n.situacao === 'Erro' ? 'error' : 'info' }}</mat-icon>
+        <div>
+          {{ n.mensagem }}
+          @if (n.situacao === 'ResultadoAConfirmar') {
+            <div class="pequeno">
+              Enquanto o resultado não for confirmado, a nota não pode ser editada nem reenviada.
+              <button mat-button (click)="consultar()">Consultar novamente</button>
+            </div>
+          }
+        </div>
+      </div>
+    }
+    @if (n.situacao === 'Ignorada') {
+      <div class="aviso"><mat-icon>block</mat-icon> Ignorada nesta competência. {{ n.motivoIgnorada }}</div>
+    }
+    @if (n.pendencias.length) {
+      <div class="aviso alerta">
+        <mat-icon>checklist</mat-icon>
+        <div>
+          <strong>Antes de marcar como pronta:</strong>
+          <ul>
+            @for (p of n.pendencias; track p) {
+              <li>{{ p }}</li>
+            }
+          </ul>
+        </div>
+      </div>
+    }
+
+    <mat-tab-group [selectedIndex]="aba()" (selectedIndexChange)="aba.set($event)" animationDuration="0ms">
+      <!-- ============ DADOS ============ -->
+      <mat-tab label="Dados">
+        @if (form; as f) {
+          <form [formGroup]="f" (ngSubmit)="salvar()" class="edicao">
+            <h3>Campos desta competência</h3>
+            <div class="grade-form">
+              <mat-form-field>
+                <mat-label>Valor (R$)</mat-label>
+                <input matInput formControlName="valor" inputmode="decimal" placeholder="0,00" [attr.cdkFocusInitial]="data.editar ? '' : null" />
+                @if (n.valorAnterior; as va) {
+                  <mat-hint>Competência anterior ({{ mesCurto(va.ano, va.mes) }}): {{ brl(va.valor) }}</mat-hint>
+                }
+              </mat-form-field>
+              <mat-form-field>
+                <mat-label>Cenário de simulação</mat-label>
+                <mat-select formControlName="cenarioSimulacao">
+                  @for (c of cenarios; track c.valor) {
+                    <mat-option [value]="c.valor">{{ c.rotulo }}</mat-option>
+                  }
+                </mat-select>
+                <mat-hint>{{ descricaoCenario(f.get('cenarioSimulacao')!.value) }}</mat-hint>
+              </mat-form-field>
+              @if (!ehAvulsa() && variavel('Descricao')) {
+                <mat-form-field class="largo">
+                  <mat-label>Descrição do serviço</mat-label>
+                  <textarea matInput formControlName="descricao" rows="3"></textarea>
+                  @if (pendenteRevisao('Descricao')) {
+                    <mat-hint class="revisar">Campo variável: revise nesta competência e salve.</mat-hint>
+                  }
+                </mat-form-field>
+              }
+              @if (!ehAvulsa() && variavel('InformacoesComplementares')) {
+                <mat-form-field class="largo">
+                  <mat-label>Informações complementares</mat-label>
+                  <textarea matInput formControlName="informacoesComplementares" rows="2"></textarea>
+                  @if (pendenteRevisao('InformacoesComplementares')) {
+                    <mat-hint class="revisar">Campo variável: revise nesta competência e salve.</mat-hint>
+                  }
+                </mat-form-field>
+              }
+            </div>
+            @if (ehAvulsa()) {
+              <div class="grade-form">
+                <mat-form-field class="largo">
+                  <mat-label>Identificação interna</mat-label>
+                  <input matInput formControlName="identificacao" />
+                </mat-form-field>
+              </div>
+              <fieldset class="secao"><legend>Tomador</legend><app-campos-tomador [grupo]="$any(f.get('tomador'))" /></fieldset>
+              <fieldset class="secao"><legend>Serviço</legend><app-campos-servico [grupo]="$any(f.get('servico'))" /></fieldset>
+            }
+            <div class="botoes">
+              @if (!ehAvulsa()) {
+                <button mat-button type="button" (click)="atualizarDoCadastro()">
+                  <mat-icon>sync</mat-icon> Atualizar dados a partir do cadastro
+                </button>
+              }
+              <span class="espaco"></span>
+              <button mat-flat-button type="submit" [disabled]="salvando()">Salvar</button>
+            </div>
+            @if (n.situacao === 'Pronta' || n.situacao === 'Erro') {
+              <p class="pequeno suave">Ao salvar, a linha volta para Pendente e precisa ser marcada como pronta novamente.</p>
+            }
+          </form>
+        }
+        @for (e of erros(); track e) {
+          <div class="erro-texto pequeno">{{ e }}</div>
+        }
+
+        <h3>Dados usados nesta competência</h3>
+        <p class="pequeno suave">Cópia feita na abertura da competência; alterações no cadastro não afetam esta linha.</p>
+        <dl class="dados">
+          <dt>Tomador</dt>
+          <dd>{{ n.tomador.nome }} — {{ doc(n.tomador.documento) }}</dd>
+          <dt>E-mail</dt>
+          <dd>{{ n.tomador.email || '—' }}</dd>
+          <dt>Endereço do tomador</dt>
+          <dd>{{ endereco(n.tomador.endereco) }}</dd>
+          <dt>Descrição</dt>
+          <dd class="pre">{{ n.servico.descricao }}</dd>
+          <dt>Cód. tributação nacional</dt>
+          <dd>{{ n.servico.codigoTributacaoNacional || '—' }}</dd>
+          <dt>Cód. tributação municipal</dt>
+          <dd>{{ n.servico.codigoTributacaoMunicipal || '—' }}</dd>
+          <dt>Código NBS</dt>
+          <dd>{{ n.servico.codigoNbs || '—' }}</dd>
+          <dt>Município de prestação</dt>
+          <dd>{{ n.servico.codigoMunicipioPrestacao || '—' }}</dd>
+          <dt>Tributação do ISSQN</dt>
+          <dd>{{ rotuloTributacao(n.servico.tributacaoIssqn) }}</dd>
+          <dt>Alíquota ISS / retido</dt>
+          <dd>{{ n.servico.aliquotaIss != null ? n.servico.aliquotaIss + '%' : '—' }} / {{ n.servico.issRetido ? 'retido' : 'não retido' }}</dd>
+          <dt>Informações complementares</dt>
+          <dd class="pre">{{ n.servico.informacoesComplementares || '—' }}</dd>
+          <dt>Valor</dt>
+          <dd><strong>{{ brl(n.valor) }}</strong></dd>
+        </dl>
+      </mat-tab>
+
+      <!-- ============ TENTATIVAS ============ -->
+      <mat-tab [label]="'Tentativas (' + n.tentativas.length + ')'">
+        @if (n.trabalho; as t) {
+          <div class="trabalho">
+            <strong>Fila de processamento:</strong> {{ rotuloStatus[t.status] }}
+            @if (t.status === 'Pendente') {
+              · próxima execução {{ dataHora(t.proximaExecucaoEm) }}
+            }
+            · {{ t.execucoes }} execução(ões) · {{ t.falhasTemporarias }} falha(s) temporária(s)
+            @if (t.ultimaMensagem) {
+              <div class="pequeno suave">{{ t.ultimaMensagem }}</div>
+            }
+          </div>
+        }
+        @for (t of n.tentativas; track t.id) {
+          <div class="tentativa {{ classeResultado(t) }}">
+            <div class="linha-t">
+              <strong>#{{ t.sequencia }} {{ t.tipo }}</strong>
+              <span class="resultado">{{ rotuloResultado[t.resultado] }}</span>
+              <span class="espaco"></span>
+              <span class="pequeno suave">{{ dataHora(t.iniciadaEm) }}</span>
+            </div>
+            @if (t.detalhe) {
+              <div class="pequeno">{{ t.detalhe }}</div>
+            }
+            @for (m of t.mensagens; track $index) {
+              <div class="mensagem"><code>{{ m.codigo }}</code> {{ m.descricao }}
+                @if (m.complemento) {
+                  <div class="pequeno suave">{{ m.complemento }}</div>
+                }
+              </div>
+            }
+            <div class="pequeno suave">
+              Provedor {{ t.provedor }} · worker {{ t.workerId || '—' }}
+              @if (t.numeroNfse) {
+                · NFS-e {{ t.numeroNfse }}
+              }
+            </div>
+            @if (t.possuiDadosEnviados) {
+              <button mat-button class="pequeno" (click)="verDados(t)">
+                <mat-icon>data_object</mat-icon> {{ dadosEnviados()[t.id] ? 'Ocultar' : 'Ver' }} dados enviados
+              </button>
+              @if (dadosEnviados()[t.id]) {
+                <pre class="json">{{ dadosEnviados()[t.id] }}</pre>
+              }
+            }
+          </div>
+        } @empty {
+          <p class="suave">Nenhuma tentativa de emissão ainda.</p>
+        }
+      </mat-tab>
+
+      <!-- ============ DOCUMENTO ============ -->
+      <mat-tab label="Documento">
+        @if (n.situacao === 'Emitida') {
+          @if (n.emissaoSimulada) {
+            <div class="aviso erro"><mat-icon>science</mat-icon> Emissão SIMULADA — sem validade fiscal.</div>
+          }
+          <dl class="dados">
+            <dt>Número {{ n.emissaoSimulada ? '(simulado)' : 'da NFS-e' }}</dt>
+            <dd>{{ n.numeroNfse }}</dd>
+            <dt>Chave {{ n.emissaoSimulada ? '(simulada)' : 'de acesso' }}</dt>
+            <dd class="quebra">{{ n.chaveAcesso }}</dd>
+            <dt>Emitida em</dt>
+            <dd>{{ dataHora(n.emitidaEm) }}</dd>
+          </dl>
+          <div class="botoes">
+            <button mat-flat-button (click)="pdf()"><mat-icon>picture_as_pdf</mat-icon> Baixar PDF {{ n.emissaoSimulada ? '(simulação)' : '' }}</button>
+            @if (n.xmlDisponivel) {
+              <button mat-stroked-button (click)="xml()"><mat-icon>code</mat-icon> Baixar XML autorizado</button>
+            } @else {
+              <span class="pequeno suave">XML fiscal não disponível: notas simuladas não possuem XML autorizado.</span>
+            }
+          </div>
+        } @else {
+          <p class="suave">Documentos ficam disponíveis após a emissão.</p>
+        }
+        @if (n.identificadorDps) {
+          <h3>DPS</h3>
+          <dl class="dados">
+            <dt>Identificador</dt>
+            <dd class="quebra">{{ n.identificadorDps }}</dd>
+            <dt>Série / número</dt>
+            <dd>{{ n.serieDps }} / {{ n.numeroDps }}</dd>
+            <dt>Data de competência</dt>
+            <dd>{{ data_(n.dataCompetencia) }}</dd>
+            @if (n.dps; as d) {
+              <dt>Prestador (congelado)</dt>
+              <dd>{{ d.prestador.razaoSocial }} — {{ doc(d.prestador.cnpj) }}</dd>
+              <dt>Confirmada em</dt>
+              <dd>{{ dataHora(d.confirmadaEm) }}</dd>
+            }
+          </dl>
+        }
+      </mat-tab>
+    </mat-tab-group>
+  </mat-dialog-content>
+} @else {
+  <mat-dialog-content><mat-progress-bar mode="indeterminate" /></mat-dialog-content>
+}
