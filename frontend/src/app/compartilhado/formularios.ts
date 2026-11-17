@@ -42,6 +42,9 @@ export function formServico(fb: FormBuilder, s?: DadosServico | null, municipioP
     tributacaoIssqn: [s?.tributacaoIssqn ?? 'NaoInformado'],
     aliquotaIss: [s?.aliquotaIss ?? null, [Validators.min(0), Validators.max(100)]],
     issRetido: [s?.issRetido ?? false],
+    cstIbsCbs: [s?.cstIbsCbs ?? '', Validators.pattern(/^\d{3}$/)],
+    classificacaoTributariaIbsCbs: [s?.classificacaoTributariaIbsCbs ?? '', Validators.pattern(/^\d{6}$/)],
+    indicadorOperacaoIbsCbs: [s?.indicadorOperacaoIbsCbs ?? '', Validators.pattern(/^\d{6}$/)],
     informacoesComplementares: [s?.informacoesComplementares ?? ''],
   });
 }
@@ -119,7 +122,10 @@ export class CamposTomador {
         <mat-label>Descrição do serviço</mat-label>
         <textarea matInput formControlName="descricao" rows="3"></textarea>
         @if (mostrarMarcadores()) {
-          <mat-hint>Marcadores: {{ '{competencia}' }} → 11/2026 · {{ '{mes_ano}' }} → novembro/2026 · {{ '{mes}' }} · {{ '{ano}' }}</mat-hint>
+          <mat-hint>
+            Marcadores: {{ '{competencia}' }} → 11/2026 · {{ '{mes_ano}' }} → novembro/2026 · {{ '{mes_anterior}' }} → outubro ·
+            {{ '{competencia_anterior}' }} → 10/2026 · em MAIÚSCULAS ({{ '{MES_ANTERIOR}' }}) gera OUTUBRO
+          </mat-hint>
         }
       </mat-form-field>
       <mat-form-field>
@@ -155,6 +161,22 @@ export class CamposTomador {
         <mat-checkbox formControlName="issRetido">ISS retido pelo tomador</mat-checkbox>
         <span class="selo-confirmar">confirmar</span>
       </div>
+      <div class="largo subtitulo">
+        IBS/CBS (Reforma Tributária) <span class="selo-confirmar">confirmar</span>
+        <span class="pequeno suave">— classificação informada na DPS; os valores são apurados pelo sistema nacional.</span>
+      </div>
+      <mat-form-field>
+        <mat-label>CST IBS/CBS</mat-label>
+        <input matInput formControlName="cstIbsCbs" maxlength="3" placeholder="3 dígitos" />
+      </mat-form-field>
+      <mat-form-field>
+        <mat-label>Classificação tributária (cClassTrib)</mat-label>
+        <input matInput formControlName="classificacaoTributariaIbsCbs" maxlength="6" placeholder="6 dígitos" />
+      </mat-form-field>
+      <mat-form-field>
+        <mat-label>Indicador da operação</mat-label>
+        <input matInput formControlName="indicadorOperacaoIbsCbs" maxlength="6" placeholder="6 dígitos" />
+      </mat-form-field>
       <mat-form-field class="largo">
         <mat-label>Informações complementares</mat-label>
         <textarea matInput formControlName="informacoesComplementares" rows="2"></textarea>
@@ -165,6 +187,10 @@ export class CamposTomador {
     .check {
       display: flex;
       align-items: center;
+    }
+    .subtitulo {
+      font-weight: 600;
+      margin-top: 4px;
     }
   `,
 })

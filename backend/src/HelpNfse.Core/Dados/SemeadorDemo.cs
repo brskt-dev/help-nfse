@@ -16,7 +16,7 @@ public static class SemeadorDemo
 {
     private sealed record Cliente(
         string Identificacao, string Documento, string Nome, string Descricao, CamposVariaveis Variaveis,
-        decimal?[] Valores, bool Ativa = true, string? Email = null, string? Info = null);
+        decimal?[] Valores, bool Ativa = true, string? Email = null, string? Info = null, bool IssRetido = false);
 
     public static async Task<bool> SemearAsync(AppDbContext db, IProvedorNfse provedor, TimeProvider relogio, CancellationToken ct)
     {
@@ -25,23 +25,23 @@ public static class SemeadorDemo
         var agora = relogio.GetUtcNow();
         var emissor = new Emissor
         {
-            RazaoSocial = "Prestadora Exemplo Serviços Ltda (FICTÍCIA)",
-            NomeFantasia = "Exemplo Serviços",
+            RazaoSocial = "Alarmes Exemplo Monitoramento Ltda (FICTÍCIA)",
+            NomeFantasia = "Alarmes Exemplo",
             Cnpj = "11222333000181",
-            InscricaoMunicipal = "1234567",
-            Email = "contato@exemplo.invalid",
-            Telefone = "11999990000",
+            InscricaoMunicipal = null,
+            Email = "financeiro@exemplo.invalid",
+            Telefone = "19999990000",
             Endereco = new Endereco
             {
-                Cep = "01001000", Logradouro = "Praça da Sé", Numero = "100", Complemento = "Sala 1", Bairro = "Sé",
-                CodigoMunicipio = "3550308", NomeMunicipio = "São Paulo", Uf = "SP",
+                Cep = "13465000", Logradouro = "Rua Exemplo", Numero = "100", Bairro = "Centro",
+                CodigoMunicipio = "3501608", NomeMunicipio = "Americana", Uf = "SP",
             },
             OpcaoSimplesNacional = OpcaoSimplesNacional.MeEpp,
             RegimeApuracaoSimples = RegimeApuracaoSimples.TributosFederaisEMunicipalPeloSimples,
             RegimeEspecialTributacao = RegimeEspecialTributacao.Nenhum,
             SerieDps = "1",
             ProximoNumeroDps = 1,
-            RegraDataCompetencia = RegraDataCompetencia.UltimoDiaDoMes,
+            RegraDataCompetencia = RegraDataCompetencia.DataDaEmissao,
             AtualizadoEm = agora,
         };
         db.Emissores.Add(emissor);
@@ -49,26 +49,26 @@ public static class SemeadorDemo
         // Valores das três competências anteriores (mais antiga → mais recente). null = sem linha naquele mês.
         Cliente[] clientes =
         [
-            new("Clínica Vida Plena — consultoria", "12345678000195", "Clínica Vida Plena Ltda (fictícia)",
-                "Consultoria em gestão administrativa — competência {competencia}", CamposVariaveis.Nenhum, [2500m, 2500m, 2650m],
+            new("Clínica Vida Plena — monitoramento", "12345678000195", "Clínica Vida Plena Ltda (fictícia)",
+                "MONITORAMENTO ELETRÔNICO DE ALARME — MÊS DE REFERÊNCIA {MES_ANTERIOR}", CamposVariaveis.Nenhum, [148.20m, 148.20m, 152.68m],
                 Email: "financeiro@vidaplena.invalid"),
-            new("Escola Aprender Mais — suporte de TI", "23456789000195", "Escola Aprender Mais S/A (fictícia)",
-                "Suporte técnico em informática — {mes_ano}", CamposVariaveis.Nenhum, [1800m, 1800m, 1800m]),
-            new("Mercado Bom Preço — rotinas administrativas", "34567890000130", "Mercado Bom Preço Ltda (fictícia)",
-                "Serviços administrativos referentes a {mes_ano}", CamposVariaveis.Descricao, [3200m, 3350m, 3100m]),
-            new("Ana Souza — mentoria", "12345678909", "Ana Souza (fictícia)",
-                "Mentoria profissional — {mes_ano}", CamposVariaveis.Nenhum, [600m, 600m, 750m]),
-            new("Construtora Horizonte — manutenção de sistemas", "45678901000175", "Construtora Horizonte Ltda (fictícia)",
-                "Manutenção mensal de sistemas — {competencia}", CamposVariaveis.InformacoesComplementares, [4500m, 4500m, 4500m],
-                Info: "Pedido de compra nº (informar a cada mês)"),
-            new("Bruno Lima — aulas particulares", "98765432100", "Bruno Lima (fictício)",
-                "Aulas particulares de matemática — {mes_ano}", CamposVariaveis.Nenhum, [350m, 400m, 400m]),
-            new("Padaria Pão Quente — site", "12ABC345000188", "Padaria Pão Quente ME (fictícia, CNPJ alfanumérico)",
-                "Hospedagem e manutenção de site — {competencia}", CamposVariaveis.Nenhum, [null, 250m, 250m]),
-            new("Instituto Saber — palestras", "56789012000100", "Instituto Saber (fictício)",
-                "Palestras e treinamentos — {mes_ano}", CamposVariaveis.Descricao, [null, null, 1200m]),
-            new("Loja Antiga — encerrado", "67890123000116", "Loja Antiga Comércio Ltda (fictícia)",
-                "Consultoria comercial — {competencia}", CamposVariaveis.Nenhum, [900m, 900m, null], Ativa: false),
+            new("Escola Aprender Mais — alarme de incêndio", "23456789000195", "Escola Aprender Mais S/A (fictícia)",
+                "MONITORAMENTO ELETRÔNICO DE ALARME DE INCÊNDIO — VENCIMENTO DIA 30", CamposVariaveis.Nenhum, [294.46m, 294.46m, 294.46m]),
+            new("Mercado Bom Preço — monitoramento", "34567890000130", "Mercado Bom Preço Ltda (fictícia)",
+                "Monitoramento eletrônico de alarme referente a {mes_anterior}", CamposVariaveis.Descricao, [310.00m, 335.50m, 318.90m]),
+            new("Ana Souza — residência", "12345678909", "Ana Souza (fictícia)",
+                "Monitoramento eletrônico de alarme residencial", CamposVariaveis.Nenhum, [99.90m, 99.90m, 109.90m]),
+            new("Condomínio Horizonte — monitoramento (ISS retido)", "45678901000175", "Condomínio Horizonte (fictício)",
+                "Monitoramento eletrônico de alarme — {competencia_anterior}", CamposVariaveis.InformacoesComplementares, [450.00m, 450.00m, 450.00m],
+                Info: "Pedido de compra nº (informar a cada mês)", IssRetido: true),
+            new("Bruno Lima — escritório", "98765432100", "Bruno Lima (fictício)",
+                "Monitoramento eletrônico de alarme", CamposVariaveis.Nenhum, [130.87m, 130.87m, 130.87m]),
+            new("Padaria Pão Quente — monitoramento", "12ABC345000188", "Padaria Pão Quente ME (fictícia, CNPJ alfanumérico)",
+                "Monitoramento eletrônico de alarme — mês de referência {mes_anterior}", CamposVariaveis.Nenhum, [null, 153.00m, 153.00m]),
+            new("Instituto Saber — monitoramento", "56789012000100", "Instituto Saber (fictício)",
+                "Monitoramento eletrônico de alarme e CFTV — {mes_anterior}", CamposVariaveis.Descricao, [null, null, 220.00m]),
+            new("Loja Antiga — contrato encerrado", "67890123000116", "Loja Antiga Comércio Ltda (fictícia)",
+                "Monitoramento eletrônico de alarme — {competencia_anterior}", CamposVariaveis.Nenhum, [180.00m, 180.00m, null], Ativa: false),
         ];
 
         var recorrencias = clientes.Select(c => new Recorrencia
@@ -78,19 +78,24 @@ public static class SemeadorDemo
             Tomador = new DadosTomador
             {
                 Documento = c.Documento, Nome = c.Nome, Email = c.Email,
-                Endereco = new Endereco { CodigoMunicipio = "3550308", NomeMunicipio = "São Paulo", Uf = "SP" },
+                Endereco = new Endereco { CodigoMunicipio = "3501608", NomeMunicipio = "Americana", Uf = "SP" },
             },
             Servico = new DadosServico
             {
                 Descricao = c.Descricao,
-                CodigoTributacaoNacional = "010101",
-                CodigoMunicipioPrestacao = "3550308",
+                CodigoTributacaoNacional = "110201",
+                CodigoNbs = "118023000",
+                CodigoMunicipioPrestacao = "3501608",
                 TributacaoIssqn = TributacaoIssqn.OperacaoTributavel,
-                AliquotaIss = 2m,
+                IssRetido = c.IssRetido,
+                AliquotaIss = c.IssRetido ? 2.00m : null,
+                CstIbsCbs = "000",
+                ClassificacaoTributariaIbsCbs = "000001",
+                IndicadorOperacaoIbsCbs = "030101",
                 InformacoesComplementares = c.Info,
             },
             CamposVariaveis = c.Variaveis,
-            Observacoes = "Cadastro fictício de demonstração.",
+            Observacoes = "Cadastro fictício de demonstração. Códigos fiscais a confirmar com o contador.",
             CriadaEm = agora,
             AtualizadaEm = agora,
             DesativadaEm = c.Ativa ? null : agora,
@@ -161,7 +166,7 @@ public static class SemeadorDemo
                         [new MensagemProvedor("SIM-E001", "Rejeição SIMULADA: código de tributação incompatível com o município de prestação.")]);
                     Tentativa(TipoTentativa.Envio, ResultadoTentativa.Autorizada, emitidaEm, "Emissão SIMULADA autorizada (sem validade fiscal).");
                 }
-                else if (m == 2 && clientes[i].Identificacao.StartsWith("Construtora"))
+                else if (m == 2 && clientes[i].Identificacao.StartsWith("Condomínio"))
                 {
                     // Exemplo de resultado incerto reconciliado por consulta, sem reenvio.
                     Tentativa(TipoTentativa.Envio, ResultadoTentativa.Incerta, emitidaEm.AddSeconds(-20), "SIMULAÇÃO: tempo limite excedido após o envio.");

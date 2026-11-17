@@ -1,0 +1,16 @@
+**/bin
+**/obj
+**/node_modules
+**/dist
+**/.angular
+**/TestResults
+.git
+.github
+.env
+.env.*
+secrets
+docs
+deploy
+docker
+*.md
+backend/tests

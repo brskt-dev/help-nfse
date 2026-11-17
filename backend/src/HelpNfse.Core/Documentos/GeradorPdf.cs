@@ -104,6 +104,8 @@ public static class GeradorPdf
                     Linha(t, "Tributação do ISSQN", Rotulos.De(dps.Servico.TributacaoIssqn));
                     Linha(t, "Alíquota ISS informada", dps.Servico.AliquotaIss is { } a ? $"{a:0.##}%" : null);
                     Linha(t, "ISS retido", dps.Servico.IssRetido ? "Sim" : "Não");
+                    Linha(t, "IBS/CBS — CST / cClassTrib / ind. operação",
+                        $"{dps.Servico.CstIbsCbs ?? "—"} / {dps.Servico.ClassificacaoTributariaIbsCbs ?? "—"} / {dps.Servico.IndicadorOperacaoIbsCbs ?? "—"}");
                     Linha(t, "Informações complementares", dps.Servico.InformacoesComplementares);
                 });
                 c.Item().Background(Colors.Grey.Lighten4).Padding(8).Row(r =>

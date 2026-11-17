@@ -13,7 +13,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace HelpNfse.Core.Dados.Migracoes
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20261117191147_Inicial")]
+    [Migration("20261117193446_Inicial")]
     partial class Inicial
     {
         /// <inheritdoc />
@@ -365,6 +365,11 @@ namespace HelpNfse.Core.Dados.Migracoes
                                 .HasColumnType("numeric(5,2)")
                                 .HasColumnName("servico_aliquota_iss");
 
+                            b1.Property<string>("ClassificacaoTributariaIbsCbs")
+                                .HasMaxLength(6)
+                                .HasColumnType("character varying(6)")
+                                .HasColumnName("servico_classificacao_tributaria_ibs_cbs");
+
                             b1.Property<string>("CodigoMunicipioPrestacao")
                                 .HasMaxLength(7)
                                 .HasColumnType("character varying(7)")
@@ -385,11 +390,21 @@ namespace HelpNfse.Core.Dados.Migracoes
                                 .HasColumnType("character varying(6)")
                                 .HasColumnName("servico_codigo_tributacao_nacional");
 
+                            b1.Property<string>("CstIbsCbs")
+                                .HasMaxLength(3)
+                                .HasColumnType("character varying(3)")
+                                .HasColumnName("servico_cst_ibs_cbs");
+
                             b1.Property<string>("Descricao")
                                 .IsRequired()
                                 .HasMaxLength(2000)
                                 .HasColumnType("character varying(2000)")
                                 .HasColumnName("servico_descricao");
+
+                            b1.Property<string>("IndicadorOperacaoIbsCbs")
+                                .HasMaxLength(6)
+                                .HasColumnType("character varying(6)")
+                                .HasColumnName("servico_indicador_operacao_ibs_cbs");
 
                             b1.Property<string>("InformacoesComplementares")
                                 .HasMaxLength(2000)
@@ -561,6 +576,11 @@ namespace HelpNfse.Core.Dados.Migracoes
                                 .HasColumnType("numeric(5,2)")
                                 .HasColumnName("servico_aliquota_iss");
 
+                            b1.Property<string>("ClassificacaoTributariaIbsCbs")
+                                .HasMaxLength(6)
+                                .HasColumnType("character varying(6)")
+                                .HasColumnName("servico_classificacao_tributaria_ibs_cbs");
+
                             b1.Property<string>("CodigoMunicipioPrestacao")
                                 .HasMaxLength(7)
                                 .HasColumnType("character varying(7)")
@@ -581,11 +601,21 @@ namespace HelpNfse.Core.Dados.Migracoes
                                 .HasColumnType("character varying(6)")
                                 .HasColumnName("servico_codigo_tributacao_nacional");
 
+                            b1.Property<string>("CstIbsCbs")
+                                .HasMaxLength(3)
+                                .HasColumnType("character varying(3)")
+                                .HasColumnName("servico_cst_ibs_cbs");
+
                             b1.Property<string>("Descricao")
                                 .IsRequired()
                                 .HasMaxLength(2000)
                                 .HasColumnType("character varying(2000)")
                                 .HasColumnName("servico_descricao");
+
+                            b1.Property<string>("IndicadorOperacaoIbsCbs")
+                                .HasMaxLength(6)
+                                .HasColumnType("character varying(6)")
+                                .HasColumnName("servico_indicador_operacao_ibs_cbs");
 
                             b1.Property<string>("InformacoesComplementares")
                                 .HasMaxLength(2000)

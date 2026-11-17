@@ -9,4 +9,8 @@
   <ItemGroup>
     <PackageReference Include="Microsoft.Extensions.Hosting" />
   </ItemGroup>
+  <ItemGroup>
+    <!-- Configuração de desenvolvimento nunca vai para a imagem. -->
+    <Content Update="appsettings.Development.json" CopyToPublishDirectory="Never" />
+  </ItemGroup>
 </Project>

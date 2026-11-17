@@ -15,4 +15,9 @@
   <ItemGroup>
     <InternalsVisibleTo Include="HelpNfse.Tests" />
   </ItemGroup>
+  <ItemGroup>
+    <!-- Configuração de desenvolvimento nunca vai para a imagem. -->
+    <Content Update="appsettings.Development.json" CopyToPublishDirectory="Never" />
+    <Content Update="wwwroot\index.html" CopyToPublishDirectory="Never" />
+  </ItemGroup>
 </Project>

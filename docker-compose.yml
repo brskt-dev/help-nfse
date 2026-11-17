@@ -1,0 +1,100 @@
+# help-nfse — execução LOCAL completa (PostgreSQL próprio + migrações + API/frontend + worker).
+# Uso:  cp .env.example .env  (defina as senhas)  &&  docker compose up --build
+# Acesso: http://localhost:8080
+#
+# O deploy na VPS usa deploy/compose.yml (contrato BRSKT, banco compartilhado), não este arquivo.
+name: help-nfse-local
+
+x-app: &app
+  image: help-nfse:local
+  restart: unless-stopped
+  init: true
+  read_only: true
+  tmpfs:
+    - /tmp
+  security_opt:
+    - no-new-privileges:true
+  environment: &app-env
+    ConnectionStrings__Default: Host=db;Port=5432;Database=helpnfse;Username=helpnfse_app;Password=${DB_APP_PASSWORD:?defina DB_APP_PASSWORD no .env}
+    Admin__Email: ${ADMIN_EMAIL:?defina ADMIN_EMAIL no .env}
+    Admin__Senha: ${ADMIN_PASSWORD:?defina ADMIN_PASSWORD no .env}
+    Demo__CarregarDados: ${DEMO_DADOS:-true}
+    Emissao__Provedor: Simulacao
+    Simulacao__PermitirInterrupcaoReal: ${SIMULACAO_INTERROMPER_WORKER:-true}
+
+services:
+  db:
+    image: postgres:18-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: helpnfse
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?defina POSTGRES_PASSWORD no .env}
+      DB_MIGRATOR_PASSWORD: ${DB_MIGRATOR_PASSWORD:?defina DB_MIGRATOR_PASSWORD no .env}
+      DB_APP_PASSWORD: ${DB_APP_PASSWORD:?defina DB_APP_PASSWORD no .env}
+    volumes:
+      - pgdata:/var/lib/postgresql
+      - ./docker/postgres-init.sh:/docker-entrypoint-initdb.d/10-usuarios.sh:ro
+    ports:
+      - "127.0.0.1:${DB_PORTA_LOCAL:-5433}:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d helpnfse"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  migrate:
+    image: help-nfse:local
+    build:
+      context: .
+    command: ["--migrate"]
+    read_only: true
+    tmpfs:
+      - /tmp
+    environment:
+      ConnectionStrings__Migrations: Host=db;Port=5432;Database=helpnfse;Username=helpnfse_migrator;Password=${DB_MIGRATOR_PASSWORD}
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: "no"
+
+  app:
+    <<: *app
+    ports:
+      - "${PORTA:-8080}:8080"
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://127.0.0.1:8080/health"]
+      interval: 15s
+      timeout: 3s
+      retries: 3
+      start_period: 30s
+
+  worker:
+    <<: *app
+    entrypoint: ["dotnet", "/app/worker/HelpNfse.Worker.dll"]
+    working_dir: /app/worker
+    stop_grace_period: 50s
+    environment:
+      <<: *app-env
+      Emissao__WorkerId: helpnfse-worker-local
+      # Esperas curtas para a demonstração local dos cenários de simulação.
+      Emissao__JanelaMinimaReenvio: "00:00:10"
+      Emissao__EsperasConsulta__0: "00:00:05"
+      Emissao__EsperasConsulta__1: "00:00:10"
+      Emissao__EsperasFalhaTemporaria__0: "00:00:05"
+      Emissao__EsperasFalhaTemporaria__1: "00:00:10"
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD-SHELL", "test $$(( $$(date +%s) - $$(stat -c %Y /tmp/helpnfse-worker.alive) )) -lt 60"]
+      interval: 20s
+      timeout: 3s
+      retries: 3
+      start_period: 30s
+
+volumes:
+  pgdata:

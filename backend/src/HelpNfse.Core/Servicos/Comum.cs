@@ -41,15 +41,36 @@ public static class Formatos
 
 /// <summary>
 /// Substitui marcadores simples na descrição padrão de uma recorrência ao gerar a linha da competência.
-/// {competencia} → 11/2026, {mes_ano} → novembro/2026, {mes} → novembro, {ano} → 2026.
+/// {competencia} → 11/2026 · {mes_ano} → novembro/2026 · {mes} → novembro · {ano} → 2026 ·
+/// {mes_anterior} → outubro · {competencia_anterior} → 10/2026.
+/// Marcador escrito em MAIÚSCULAS gera o texto em maiúsculas (ex.: {MES_ANTERIOR} → OUTUBRO).
 /// </summary>
-public static class ModeloDescricao
+public static partial class ModeloDescricao
 {
-    public static readonly string[] Marcadores = ["{competencia}", "{mes_ano}", "{mes}", "{ano}"];
+    public static readonly string[] Marcadores =
+        ["{competencia}", "{mes_ano}", "{mes}", "{ano}", "{mes_anterior}", "{competencia_anterior}"];
 
-    public static string Aplicar(string modelo, int ano, int mes) => modelo
-        .Replace("{competencia}", $"{mes:00}/{ano}", StringComparison.OrdinalIgnoreCase)
-        .Replace("{mes_ano}", Formatos.MesAno(ano, mes), StringComparison.OrdinalIgnoreCase)
-        .Replace("{mes}", Formatos.NomeMes(mes), StringComparison.OrdinalIgnoreCase)
-        .Replace("{ano}", ano.ToString(CultureInfo.InvariantCulture), StringComparison.OrdinalIgnoreCase);
+    [System.Text.RegularExpressions.GeneratedRegex(@"\{(competencia_anterior|competencia|mes_ano|mes_anterior|mes|ano)\}",
+        System.Text.RegularExpressions.RegexOptions.IgnoreCase)]
+    private static partial System.Text.RegularExpressions.Regex Marcador();
+
+    public static string Aplicar(string modelo, int ano, int mes)
+    {
+        var anterior = new DateOnly(ano, mes, 1).AddMonths(-1);
+        return Marcador().Replace(modelo, m =>
+        {
+            var valor = m.Groups[1].Value.ToLowerInvariant() switch
+            {
+                "competencia" => $"{mes:00}/{ano}",
+                "mes_ano" => Formatos.MesAno(ano, mes),
+                "mes" => Formatos.NomeMes(mes),
+                "ano" => ano.ToString(CultureInfo.InvariantCulture),
+                "mes_anterior" => Formatos.NomeMes(anterior.Month),
+                "competencia_anterior" => $"{anterior.Month:00}/{anterior.Year}",
+                _ => m.Value,
+            };
+            var token = m.Groups[1].Value;
+            return token == token.ToUpperInvariant() ? valor.ToUpper(Formatos.PtBr) : valor;
+        });
+    }
 }

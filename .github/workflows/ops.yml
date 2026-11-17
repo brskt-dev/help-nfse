@@ -1,0 +1,70 @@
+# Template BRSKT — operações do produto na VPS sem SSH local (para pessoas e sessões do Claude).
+# Copie para .github/workflows/ops.yml no repositório do produto (junto com o deploy.yml).
+#
+#   gh workflow run ops.yml -f command=status
+#   gh workflow run ops.yml -f command=logs -f args="exemplo-api 200"
+#   gh run list --workflow ops.yml -L 1        # pegue o id e:
+#   gh run view <id> --log                     # saída do comando
+#
+# Comandos: os do brskt-deploy (docs/deployment-guide.md, seção 4). env-sync grava o secret
+# APP_ENV (linhas KEY=VALUE) e faz redeploy. Mesma fila do deploy: nunca rodam em paralelo.
+# Mesmos pré-requisitos do deploy.yml (secret BRSKT_DEPLOY_SSH_KEY; só na branch main).
+name: ops
+
+on:
+  workflow_dispatch:
+    inputs:
+      command:
+        description: Comando
+        type: choice
+        options: [status, history, logs, restart, redeploy, rollback, env-keys, env-unset, env-sync]
+        default: status
+      args:
+        description: 'Argumentos (logs: [serviço] [linhas]; restart: [serviço]; env-unset: KEY)'
+        required: false
+        default: ''
+
+permissions:
+  contents: read
+  id-token: write                                   # token OIDC do GitHub para a Tailscale
+
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+env:
+  VPS: brskt-vps.tail61f559.ts.net
+  TS_CLIENT_ID: TFikuWCViH11CNTRL-k9P2cfddQB21CNTRL
+  TS_AUDIENCE: api.tailscale.com/TFikuWCViH11CNTRL-k9P2cfddQB21CNTRL
+
+jobs:
+  ops:
+    if: github.ref == 'refs/heads/main'             # a credencial da Tailscale só aceita a main
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: tailscale/github-action@99a8333667fff04fdd6cffb46dfd409f8329a7bf # v4.3.0
+        with:
+          oauth-client-id: ${{ env.TS_CLIENT_ID }}
+          audience: ${{ env.TS_AUDIENCE }}
+          tags: tag:ci
+      - name: run
+        env:
+          SSH_KEY: ${{ secrets.BRSKT_DEPLOY_SSH_KEY }}
+          APP_ENV: ${{ secrets.APP_ENV }}
+          CMD: ${{ inputs.command }}
+          ARGS: ${{ inputs.args }}
+        run: |
+          install -d -m 700 ~/.ssh
+          printf '%s\n' "$SSH_KEY" > ~/.ssh/brskt_deploy && chmod 600 ~/.ssh/brskt_deploy
+          echo "${VPS} ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIDgg6/OUKFbm3CWYuryQDd/NcRahG1dXwzL0+rmeVwXI" > ~/.ssh/known_hosts
+          s() { ssh -4 -i ~/.ssh/brskt_deploy -o BatchMode=yes "deploy@${VPS}" "$@"; }
+          case "$CMD" in
+            env-sync)
+              [ -n "$APP_ENV" ] || { echo "secret APP_ENV vazio ou ausente"; exit 1; }
+              printf '%s\n' "$APP_ENV" | s env-set
+              s redeploy </dev/null ;;
+            *)
+              # ARGS é dividido em palavras de propósito; a VPS valida cada argumento.
+              # shellcheck disable=SC2086
+              s "$CMD" $ARGS </dev/null ;;
+          esac

@@ -85,4 +85,12 @@ public class CompetenciaTests(PostgresServidor servidor) : TesteComBanco(servido
         var comp = await A.AbrirAsync(2026, 3);
         Assert.Equal("Serviços de março/2026 (ref. 03/2026)", comp.Linhas[0].Descricao);
     }
+
+    [Theory]
+    [InlineData("MONITORAMENTO — MÊS DE REFERÊNCIA {MES_ANTERIOR}", 2026, 11, "MONITORAMENTO — MÊS DE REFERÊNCIA OUTUBRO")]
+    [InlineData("Referente a {mes_anterior} ({competencia_anterior})", 2026, 1, "Referente a dezembro (12/2025)")]
+    [InlineData("Sem marcadores", 2026, 5, "Sem marcadores")]
+    [InlineData("{Mes} {ano}", 2026, 5, "maio 2026")]
+    public void Marcadores_de_mes_anterior_e_caixa_alta(string modelo, int ano, int mes, string esperado) =>
+        Assert.Equal(esperado, HelpNfse.Core.Servicos.ModeloDescricao.Aplicar(modelo, ano, mes));
 }

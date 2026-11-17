@@ -95,6 +95,9 @@ export interface DadosServico {
   tributacaoIssqn: TributacaoIssqn;
   aliquotaIss?: number | null;
   issRetido: boolean;
+  cstIbsCbs?: string | null;
+  classificacaoTributariaIbsCbs?: string | null;
+  indicadorOperacaoIbsCbs?: string | null;
   informacoesComplementares?: string | null;
 }
 

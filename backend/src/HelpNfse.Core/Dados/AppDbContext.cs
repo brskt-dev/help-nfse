@@ -205,6 +205,9 @@ public class AppDbContext(DbContextOptions<AppDbContext> options)
         e.Property(x => x.CodigoNbs).HasMaxLength(9);
         e.Property(x => x.CodigoMunicipioPrestacao).HasMaxLength(7);
         e.Property(x => x.AliquotaIss).HasPrecision(5, 2);
+        e.Property(x => x.CstIbsCbs).HasMaxLength(3);
+        e.Property(x => x.ClassificacaoTributariaIbsCbs).HasMaxLength(6);
+        e.Property(x => x.IndicadorOperacaoIbsCbs).HasMaxLength(6);
         e.Property(x => x.InformacoesComplementares).HasMaxLength(2000);
     }
 }

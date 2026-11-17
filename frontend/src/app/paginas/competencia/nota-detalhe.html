@@ -138,6 +138,8 @@
           <dd>{{ rotuloTributacao(n.servico.tributacaoIssqn) }}</dd>
           <dt>Alíquota ISS / retido</dt>
           <dd>{{ n.servico.aliquotaIss != null ? n.servico.aliquotaIss + '%' : '—' }} / {{ n.servico.issRetido ? 'retido' : 'não retido' }}</dd>
+          <dt>IBS/CBS (CST / cClassTrib / ind. operação)</dt>
+          <dd>{{ n.servico.cstIbsCbs || '—' }} / {{ n.servico.classificacaoTributariaIbsCbs || '—' }} / {{ n.servico.indicadorOperacaoIbsCbs || '—' }}</dd>
           <dt>Informações complementares</dt>
           <dd class="pre">{{ n.servico.informacoesComplementares || '—' }}</dd>
           <dt>Valor</dt>
