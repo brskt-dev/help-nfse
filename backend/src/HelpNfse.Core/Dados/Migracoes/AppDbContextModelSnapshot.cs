@@ -275,6 +275,11 @@ namespace HelpNfse.Core.Dados.Migracoes
                         .HasColumnType("date")
                         .HasColumnName("data_competencia");
 
+                    b.Property<string>("DescricaoModelo")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)")
+                        .HasColumnName("descricao_modelo");
+
                     b.Property<string>("DpsJson")
                         .HasColumnType("jsonb")
                         .HasColumnName("dps_json");
@@ -297,6 +302,15 @@ namespace HelpNfse.Core.Dados.Migracoes
                         .HasMaxLength(80)
                         .HasColumnType("character varying(80)")
                         .HasColumnName("identificador_dps");
+
+                    b.Property<string>("InformacoesComplementaresModelo")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)")
+                        .HasColumnName("informacoes_complementares_modelo");
+
+                    b.Property<DateOnly>("MesReferencia")
+                        .HasColumnType("date")
+                        .HasColumnName("mes_referencia");
 
                     b.Property<string>("MotivoIgnorada")
                         .HasMaxLength(300)
@@ -557,6 +571,12 @@ namespace HelpNfse.Core.Dados.Migracoes
                         .HasMaxLength(1000)
                         .HasColumnType("character varying(1000)")
                         .HasColumnName("observacoes");
+
+                    b.Property<string>("ReferenciaServico")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("referencia_servico");
 
                     b.Property<uint>("Versao")
                         .IsConcurrencyToken()

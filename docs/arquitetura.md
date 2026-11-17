@@ -45,9 +45,20 @@ Navegador (Angular)  ──HTTPS/cookie──►  API ASP.NET Core  ──►  P
 
 Enums são gravados como texto. Valores monetários usam `numeric(15,2)`. A concorrência otimista usa `xmin`.
 
-### Cópia por competência
+### Mês de emissão e mês do serviço
 
-Ao abrir a competência, cada recorrência ativa gera uma linha com **cópia** do tomador, do serviço e dos
+- A entidade `Competencia` representa o **mês de emissão**: quando as notas saem. A navegação, os totais, o
+  "valor anterior" e o histórico são todos organizados por ele.
+- Cada nota guarda o **mês de referência do serviço** (`notas.mes_referencia`), que pode ser diferente. O padrão
+  vem da recorrência ("mês anterior ao da emissão" ou "mesmo mês") e pode ser ajustado em cada linha editável.
+  Ao mudar o mês de referência, a descrição é recalculada a partir do texto-fonte com marcadores
+  (`notas.descricao_modelo`).
+- A **data de competência da DPS** (campo fiscal) é outra coisa: segue a regra configurada no emissor (a
+  confirmar com o contador; nas notas atuais do cliente, é a data da emissão).
+
+### Cópia por mês
+
+Ao abrir o mês, cada recorrência ativa gera uma linha com **cópia** do tomador, do serviço e dos
 campos variáveis. Alterações posteriores no cadastro não afetam meses existentes. Para trazer o cadastro
 atual para uma linha ainda não emitida, há a ação explícita "Atualizar dados a partir do cadastro". Na
 confirmação da emissão, os dados completos da DPS (incluindo o prestador) são congelados em `notas.dps_json`.
@@ -60,9 +71,14 @@ complementares* como variáveis: na linha, esses campos ficam editáveis e preci
 antes de a linha ficar pronta. Os demais campos vêm do cadastro. É uma modelagem simples (flags) e extensível
 para novos campos conhecidos, sem construtor genérico de formulários.
 
-A descrição aceita marcadores: `{competencia}`, `{mes_ano}`, `{mes}`, `{ano}`, `{mes_anterior}` e
-`{competencia_anterior}`. Escritos em MAIÚSCULAS, geram texto em maiúsculas (ex.:
-"MÊS DE REFERÊNCIA {MES_ANTERIOR}" vira "MÊS DE REFERÊNCIA OUTUBRO").
+Marcadores aceitos na descrição e nas informações complementares:
+
+- mês do serviço: `{mes_referencia}` (outubro), `{mes_ano_referencia}` (outubro/2026), `{referencia}` (10/2026);
+- mês de emissão: `{mes}`, `{mes_ano}`, `{competencia}`, `{ano}`;
+- mês anterior ao da emissão: `{mes_anterior}`, `{competencia_anterior}`.
+
+Escritos em MAIÚSCULAS, geram texto em maiúsculas (ex.: "MÊS DE REFERÊNCIA {MES_REFERENCIA}" vira
+"MÊS DE REFERÊNCIA OUTUBRO").
 
 ## Situações da nota
 
@@ -72,14 +88,18 @@ Pendente ──marcar──► Pronta ──confirmar emissão──► Processa
    │   └── editar ─────┘                                ├──► Erro (rejeição ou falhas temporárias esgotadas)
    │                                                    │       └── editar/marcar ──► Pendente/Pronta
    │                                                    └──► Resultado a confirmar ──consulta──► Emitida
-   └── restaurar ── Ignorada ◄── ignorar (Pendente/Pronta/Erro)          └── inexistência confirmada ──► Processando (reenvio)
+   └── restaurar ── Ignorada ◄── ignorar (Pendente/Pronta/Erro)          └── inexistência confirmada ──► Erro (reenvio manual)
 ```
 
 - Editar uma linha **Pronta** ou com **Erro** a devolve para **Pendente**: "pronta" significa "revisada com
   estes valores".
 - **Emitida**, **Processando** e **Resultado a confirmar** não podem ser editadas.
-- Valor anterior: o último valor preenchido da mesma recorrência em uma competência anterior, desconsiderando
+- Valor anterior: o último valor preenchido da mesma recorrência em um mês de emissão anterior, desconsiderando
   linhas ignoradas. É só referência; a cópia é sempre explícita.
+- **Reenvio manual** (decisão do usuário): nenhuma nota com erro é reenviada sozinha. Falha temporária e
+  inexistência confirmada após resultado incerto levam a *Erro*; o usuário marca como pronta e emite de novo,
+  com o mesmo número de DPS. As consultas de reconciliação continuam automáticas. O modo
+  `Emissao__ReenvioAutomatico=true` existe, desligado, para uma fase futura.
 
 ## Emissão: garantias
 
@@ -98,8 +118,8 @@ Pendente ──marcar──► Pronta ──confirmar emissão──► Processa
    resultado conclusivo de "não processado" (rejeição ou falha temporária), a menos que uma consulta
    posterior tenha confirmado que a nota não existe. Isso cobre timeout, interrupção, duplicidade e resultado
    gravado por um worker que perdeu o bloqueio.
-7. **Janela mínima.** Após um envio incerto, a inexistência só autoriza reenvio se a consulta for feita ao
-   menos `JanelaMinimaReenvio` depois (padrão: 2 min). Assim, o serviço remoto tem tempo de concluir o
+7. **Janela mínima.** Após um envio incerto, a inexistência só é considerada confirmada se a consulta for feita
+   ao menos `JanelaMinimaReenvio` depois (padrão: 2 min). Assim, o serviço remoto tem tempo de concluir o
    processamento.
 8. **Mesmo identificador.** O número da DPS é atribuído uma única vez por nota e reutilizado. O serviço
    remoto pode reconhecer a duplicidade, e a consulta usa esse identificador.
@@ -117,7 +137,7 @@ Classificação dos resultados do provedor (`IProvedorNfse`):
 |---|---|---|
 | Autorizada | NFS-e gerada | Emitida |
 | Rejeitada | DPS analisada e recusada (conhecido) | Erro, com mensagens; o usuário corrige e prepara de novo |
-| FalhaTemporaria | **certeza** de não processamento | novo envio com espera; após o limite, Erro |
+| FalhaTemporaria | **certeza** de não processamento | Erro, com reenvio manual (no modo automático: novo envio com espera) |
 | Incerto | pode ter sido processado (ex.: timeout após envio) | Resultado a confirmar, depois consulta |
 | JaProcessada | o servidor acusa duplicidade | Resultado a confirmar, depois consulta |
 

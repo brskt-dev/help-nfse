@@ -123,8 +123,8 @@ export class CamposTomador {
         <textarea matInput formControlName="descricao" rows="3"></textarea>
         @if (mostrarMarcadores()) {
           <mat-hint>
-            Marcadores: {{ '{competencia}' }} → 11/2026 · {{ '{mes_ano}' }} → novembro/2026 · {{ '{mes_anterior}' }} → outubro ·
-            {{ '{competencia_anterior}' }} → 10/2026 · em MAIÚSCULAS ({{ '{MES_ANTERIOR}' }}) gera OUTUBRO
+            Mês do serviço: {{ '{mes_referencia}' }} → outubro · {{ '{mes_ano_referencia}' }} → outubro/2026 · {{ '{referencia}' }} → 10/2026.
+            Mês de emissão: {{ '{mes}' }}, {{ '{mes_ano}' }}, {{ '{competencia}' }}. Em MAIÚSCULAS ({{ '{MES_REFERENCIA}' }}) gera OUTUBRO.
           </mat-hint>
         }
       </mat-form-field>

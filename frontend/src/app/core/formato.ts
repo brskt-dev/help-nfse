@@ -43,6 +43,25 @@ export function mesCurto(ano: number, mes: number): string {
   return `${String(mes).padStart(2, '0')}/${ano}`;
 }
 
+/** "2026-10-01" → "outubro/2026". */
+export function mesAnoIso(iso: string | null | undefined): string {
+  if (!iso) return '—';
+  const [a, m] = iso.split('-').map(Number);
+  return `${nomeMes(m)}/${a}`;
+}
+
+/** Opções de mês de referência do serviço em torno do mês de emissão (12 meses antes até 1 depois). */
+export function opcoesMesReferencia(anoEmissao: number, mesEmissao: number): { valor: string; rotulo: string }[] {
+  const lista: { valor: string; rotulo: string }[] = [];
+  for (let d = -12; d <= 1; d++) {
+    const x = deslocarMes(anoEmissao, mesEmissao, d);
+    const valor = `${x.ano}-${String(x.mes).padStart(2, '0')}-01`;
+    const sufixo = d === 0 ? ' (mesmo mês da emissão)' : d === -1 ? ' (mês anterior)' : '';
+    lista.push({ valor, rotulo: `${nomeMes(x.mes)}/${x.ano}${sufixo}` });
+  }
+  return lista.reverse();
+}
+
 export function dataHoraBr(iso: string | null | undefined): string {
   return iso ? dataHora.format(new Date(iso)) : '—';
 }

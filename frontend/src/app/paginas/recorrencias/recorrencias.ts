@@ -48,6 +48,9 @@ import { RecorrenciaResumo, temCampo } from '../../core/modelos';
               @if (!r.ativa) {
                 <span class="situacao s-Ignorada">Inativa</span>
               }
+              @if (r.referenciaServico === 'MesmoMes') {
+                <span class="tag">serviço no mesmo mês da emissão</span>
+              }
               @if (temCampo(r.camposVariaveis, 'Descricao')) {
                 <span class="tag">descrição variável</span>
               }

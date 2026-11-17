@@ -16,6 +16,7 @@ import {
   RecorrenciaResumo,
   ResultadoLote,
   CenarioSimulacao,
+  ReferenciaServico,
   Sistema,
 } from './modelos';
 
@@ -24,6 +25,7 @@ export interface SalvarRecorrencia {
   tomador: DadosTomador;
   servico: DadosServico;
   camposVariaveis: string;
+  referenciaServico: ReferenciaServico;
   observacoes: string | null;
   versao: number | null;
 }
@@ -31,6 +33,8 @@ export interface SalvarRecorrencia {
 export interface AtualizarNota {
   versao: number;
   valor: number | null;
+  /** AAAA-MM-01 */
+  mesReferencia?: string | null;
   descricao?: string | null;
   informacoesComplementares?: string | null;
   cenarioSimulacao?: CenarioSimulacao | null;
@@ -45,6 +49,7 @@ export interface CriarAvulsa {
   servico: DadosServico;
   valor: number | null;
   cenarioSimulacao: CenarioSimulacao | null;
+  mesReferencia: string | null;
 }
 
 /** Cliente tipado da API. Todas as rotas exigem sessão autenticada, exceto /auth. */

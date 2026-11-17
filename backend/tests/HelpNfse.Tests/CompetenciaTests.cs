@@ -63,7 +63,7 @@ public class CompetenciaTests(PostgresServidor servidor) : TesteComBanco(servido
         Assert.Equal(SituacaoNota.Pendente, linha.Situacao);
         Assert.Equal(500m, linha.ValorAnterior?.Valor);
         Assert.Equal(10, linha.ValorAnterior?.Mes);
-        Assert.Contains("Informe o valor desta competência.", linha.Pendencias);
+        Assert.Contains("Informe o valor deste mês.", linha.Pendencias);
     }
 
     [Fact]
@@ -87,10 +87,43 @@ public class CompetenciaTests(PostgresServidor servidor) : TesteComBanco(servido
     }
 
     [Theory]
-    [InlineData("MONITORAMENTO — MÊS DE REFERÊNCIA {MES_ANTERIOR}", 2026, 11, "MONITORAMENTO — MÊS DE REFERÊNCIA OUTUBRO")]
-    [InlineData("Referente a {mes_anterior} ({competencia_anterior})", 2026, 1, "Referente a dezembro (12/2025)")]
-    [InlineData("Sem marcadores", 2026, 5, "Sem marcadores")]
-    [InlineData("{Mes} {ano}", 2026, 5, "maio 2026")]
-    public void Marcadores_de_mes_anterior_e_caixa_alta(string modelo, int ano, int mes, string esperado) =>
-        Assert.Equal(esperado, HelpNfse.Core.Servicos.ModeloDescricao.Aplicar(modelo, ano, mes));
+    [InlineData("MONITORAMENTO — MÊS DE REFERÊNCIA {MES_REFERENCIA}", 2026, 11, 2026, 10, "MONITORAMENTO — MÊS DE REFERÊNCIA OUTUBRO")]
+    [InlineData("Serviço de {mes_ano_referencia} ({referencia}), emitido em {competencia}", 2026, 1, 2025, 12, "Serviço de dezembro/2025 (12/2025), emitido em 01/2026")]
+    [InlineData("Referente a {mes_anterior} ({competencia_anterior})", 2026, 1, 2025, 12, "Referente a dezembro (12/2025)")]
+    [InlineData("Sem marcadores", 2026, 5, 2026, 4, "Sem marcadores")]
+    [InlineData("{Mes} {ano}", 2026, 5, 2026, 4, "maio 2026")]
+    public void Marcadores_de_emissao_e_referencia(string modelo, int ano, int mes, int anoRef, int mesRef, string esperado) =>
+        Assert.Equal(esperado, HelpNfse.Core.Servicos.ModeloDescricao.Aplicar(modelo, ano, mes, new DateOnly(anoRef, mesRef, 1)));
+
+    [Fact]
+    public async Task Mes_de_referencia_do_servico_vem_da_recorrencia_e_e_independente_do_mes_de_emissao()
+    {
+        await A.CriarRecorrenciaAsync("Anterior", descricao: "Ref. {MES_REFERENCIA}");
+        await A.CriarRecorrenciaAsync("Mesmo", descricao: "Ref. {referencia}", referencia: ReferenciaServico.MesmoMes);
+
+        var nov = await A.AbrirAsync(2026, 11);
+
+        var anterior = nov.Linhas.Single(l => l.TomadorNome == "Anterior");
+        Assert.Equal(new DateOnly(2026, 10, 1), anterior.MesReferencia);
+        Assert.Equal("Ref. OUTUBRO", anterior.Descricao);
+        var mesmo = nov.Linhas.Single(l => l.TomadorNome == "Mesmo");
+        Assert.Equal(new DateOnly(2026, 11, 1), mesmo.MesReferencia);
+        Assert.Equal("Ref. 11/2026", mesmo.Descricao);
+    }
+
+    [Fact]
+    public async Task Alterar_mes_de_referencia_recalcula_a_descricao_da_linha()
+    {
+        await A.CriarRecorrenciaAsync("A", CamposVariaveis.Nenhum, "Monitoramento — mês de referência {mes_referencia}");
+        var comp = await A.AbrirAsync(2026, 11);
+        var nota = await A.NotaAsync(comp.Linhas[0].Id);
+
+        var d = await A.Com<NotaServico, NotaDetalheDto>(s => s.AtualizarAsync(nota.Id,
+            new AtualizarNotaDto(nota.Versao, 10m, new DateOnly(2026, 8, 1), null, null, null, null, null, null), default));
+
+        Assert.Equal(new DateOnly(2026, 8, 1), d.MesReferencia);
+        Assert.Equal("Monitoramento — mês de referência agosto", d.Servico.Descricao);
+        // O mês de emissão continua o mesmo.
+        Assert.Equal((2026, 11), (d.Ano, d.Mes));
+    }
 }

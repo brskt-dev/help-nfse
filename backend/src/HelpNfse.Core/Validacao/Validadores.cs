@@ -32,14 +32,14 @@ public static partial class Validadores
     {
         var erros = new List<string>();
 
-        if (nota.Valor is null) erros.Add("Informe o valor desta competência.");
+        if (nota.Valor is null) erros.Add("Informe o valor deste mês.");
         else ValidarValor(nota.Valor.Value, erros);
 
         ValidarTomador(nota.Tomador, erros);
         ValidarServico(nota.Servico, erros, exigirCodigos: true);
 
         foreach (var campo in Separar(nota.CamposPendentesDeRevisao))
-            erros.Add($"Revise o campo \"{NomeCampo(campo)}\" nesta competência.");
+            erros.Add($"Revise o campo \"{NomeCampo(campo)}\" neste mês.");
 
         return erros;
     }

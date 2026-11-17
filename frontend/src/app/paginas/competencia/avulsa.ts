@@ -6,7 +6,7 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
 import { Api } from '../../core/api';
-import { mensagemErro, textoParaValor } from '../../core/formato';
+import { deslocarMes, mensagemErro, opcoesMesReferencia, textoParaValor } from '../../core/formato';
 import { CenarioSimulacao } from '../../core/modelos';
 import { CENARIOS } from '../../core/rotulos';
 import { CamposServico, CamposTomador, formServico, formTomador, limpar } from '../../compartilhado/formularios';
@@ -15,9 +15,9 @@ import { CamposServico, CamposTomador, formServico, formTomador, limpar } from '
   selector: 'app-avulsa',
   imports: [ReactiveFormsModule, MatDialogModule, MatButtonModule, MatFormFieldModule, MatInputModule, MatSelectModule, CamposTomador, CamposServico],
   template: `
-    <h2 mat-dialog-title>Nota avulsa — {{ data.rotulo }}</h2>
+    <h2 mat-dialog-title>Nota avulsa — emissão {{ data.rotulo }}</h2>
     <mat-dialog-content>
-      <p class="suave pequeno">Nota sem recorrência, apenas nesta competência. Nasce como Pendente.</p>
+      <p class="suave pequeno">Nota sem recorrência, apenas neste mês de emissão. Nasce como Pendente.</p>
       <form [formGroup]="form" id="form-avulsa" (ngSubmit)="salvar()">
         <div class="grade-form">
           <mat-form-field class="largo">
@@ -31,6 +31,14 @@ import { CamposServico, CamposTomador, formServico, formTomador, limpar } from '
           <mat-form-field>
             <mat-label>Valor (R$)</mat-label>
             <input matInput formControlName="valor" inputmode="decimal" placeholder="0,00" />
+          </mat-form-field>
+          <mat-form-field>
+            <mat-label>Mês de referência do serviço</mat-label>
+            <mat-select formControlName="mesReferencia">
+              @for (o of opcoesMes; track o.valor) {
+                <mat-option [value]="o.valor">{{ o.rotulo }}</mat-option>
+              }
+            </mat-select>
           </mat-form-field>
           <mat-form-field>
             <mat-label>Cenário de simulação</mat-label>
@@ -53,7 +61,9 @@ import { CamposServico, CamposTomador, formServico, formTomador, limpar } from '
   `,
 })
 export class AvulsaDialog implements OnInit {
-  protected readonly data = inject<{ competenciaId: number; rotulo: string }>(MAT_DIALOG_DATA);
+  protected readonly data = inject<{ competenciaId: number; rotulo: string; ano: number; mes: number }>(MAT_DIALOG_DATA);
+  protected readonly opcoesMes = opcoesMesReferencia(this.data.ano, this.data.mes);
+  private readonly mesAnterior = deslocarMes(this.data.ano, this.data.mes, -1);
   private readonly ref = inject(MatDialogRef<AvulsaDialog>);
   private readonly api = inject(Api);
   private readonly fb = inject(FormBuilder);
@@ -66,6 +76,7 @@ export class AvulsaDialog implements OnInit {
     servico: formServico(this.fb),
     valor: [''],
     cenarioSimulacao: ['Sucesso' as CenarioSimulacao],
+    mesReferencia: [`${this.mesAnterior.ano}-${String(this.mesAnterior.mes).padStart(2, '0')}-01`],
   });
 
   ngOnInit(): void {
@@ -91,6 +102,7 @@ export class AvulsaDialog implements OnInit {
         servico: { ...(limpar(v.servico) as object), issRetido: !!(v.servico as { issRetido?: boolean }).issRetido } as never,
         valor,
         cenarioSimulacao: v.cenarioSimulacao,
+        mesReferencia: v.mesReferencia,
       })
       .subscribe({
         next: () => this.ref.close(true),

@@ -13,10 +13,10 @@ import { ROTULO_SITUACAO } from '../../core/rotulos';
   template: `
     <div class="conteudo">
       <div class="titulo-pagina">
-        <h1>Histórico de competências</h1>
+        <h1>Histórico por mês de emissão</h1>
       </div>
       <p class="suave">
-        Abra uma competência para consultar os dados usados em cada nota, as tentativas de emissão, as mensagens de rejeição e os
+        Os meses abaixo são meses de emissão (quando as notas saíram). Abra um mês para consultar os dados usados em cada nota, as tentativas de emissão, as mensagens de rejeição e os
         documentos. Desativar uma recorrência não apaga o seu histórico.
       </p>
       @if (carregando()) {
@@ -42,7 +42,7 @@ import { ROTULO_SITUACAO } from '../../core/rotulos';
           </a>
         } @empty {
           @if (!carregando()) {
-            <p class="suave vazio">Nenhuma competência aberta ainda.</p>
+            <p class="suave vazio">Nenhum mês aberto ainda.</p>
           }
         }
       </div>

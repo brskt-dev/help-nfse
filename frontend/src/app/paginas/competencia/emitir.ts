@@ -15,7 +15,7 @@ import { Lote, PreviaEmissao } from '../../core/modelos';
   selector: 'app-emitir',
   imports: [MatDialogModule, MatButtonModule, MatIconModule, MatProgressBarModule],
   template: `
-    <h2 mat-dialog-title>Emitir notas prontas — {{ data.rotulo }}</h2>
+    <h2 mat-dialog-title>Emitir notas prontas — emissão {{ data.rotulo }}</h2>
     <mat-dialog-content>
       @if (!previa()) {
         <mat-progress-bar mode="indeterminate" />

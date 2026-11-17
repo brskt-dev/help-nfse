@@ -16,7 +16,8 @@ public static class SemeadorDemo
 {
     private sealed record Cliente(
         string Identificacao, string Documento, string Nome, string Descricao, CamposVariaveis Variaveis,
-        decimal?[] Valores, bool Ativa = true, string? Email = null, string? Info = null, bool IssRetido = false);
+        decimal?[] Valores, bool Ativa = true, string? Email = null, string? Info = null, bool IssRetido = false,
+        ReferenciaServico Referencia = ReferenciaServico.MesAnterior);
 
     public static async Task<bool> SemearAsync(AppDbContext db, IProvedorNfse provedor, TimeProvider relogio, CancellationToken ct)
     {
@@ -50,25 +51,26 @@ public static class SemeadorDemo
         Cliente[] clientes =
         [
             new("Clínica Vida Plena — monitoramento", "12345678000195", "Clínica Vida Plena Ltda (fictícia)",
-                "MONITORAMENTO ELETRÔNICO DE ALARME — MÊS DE REFERÊNCIA {MES_ANTERIOR}", CamposVariaveis.Nenhum, [148.20m, 148.20m, 152.68m],
+                "MONITORAMENTO ELETRÔNICO DE ALARME — MÊS DE REFERÊNCIA {MES_REFERENCIA}", CamposVariaveis.Nenhum, [148.20m, 148.20m, 152.68m],
                 Email: "financeiro@vidaplena.invalid"),
             new("Escola Aprender Mais — alarme de incêndio", "23456789000195", "Escola Aprender Mais S/A (fictícia)",
-                "MONITORAMENTO ELETRÔNICO DE ALARME DE INCÊNDIO — VENCIMENTO DIA 30", CamposVariaveis.Nenhum, [294.46m, 294.46m, 294.46m]),
+                "MONITORAMENTO ELETRÔNICO DE ALARME DE INCÊNDIO — VENCIMENTO DIA 30", CamposVariaveis.Nenhum, [294.46m, 294.46m, 294.46m],
+                Referencia: ReferenciaServico.MesmoMes),
             new("Mercado Bom Preço — monitoramento", "34567890000130", "Mercado Bom Preço Ltda (fictícia)",
-                "Monitoramento eletrônico de alarme referente a {mes_anterior}", CamposVariaveis.Descricao, [310.00m, 335.50m, 318.90m]),
+                "Monitoramento eletrônico de alarme referente a {mes_referencia}", CamposVariaveis.Descricao, [310.00m, 335.50m, 318.90m]),
             new("Ana Souza — residência", "12345678909", "Ana Souza (fictícia)",
                 "Monitoramento eletrônico de alarme residencial", CamposVariaveis.Nenhum, [99.90m, 99.90m, 109.90m]),
             new("Condomínio Horizonte — monitoramento (ISS retido)", "45678901000175", "Condomínio Horizonte (fictício)",
-                "Monitoramento eletrônico de alarme — {competencia_anterior}", CamposVariaveis.InformacoesComplementares, [450.00m, 450.00m, 450.00m],
+                "Monitoramento eletrônico de alarme — referência {referencia}", CamposVariaveis.InformacoesComplementares, [450.00m, 450.00m, 450.00m],
                 Info: "Pedido de compra nº (informar a cada mês)", IssRetido: true),
             new("Bruno Lima — escritório", "98765432100", "Bruno Lima (fictício)",
                 "Monitoramento eletrônico de alarme", CamposVariaveis.Nenhum, [130.87m, 130.87m, 130.87m]),
             new("Padaria Pão Quente — monitoramento", "12ABC345000188", "Padaria Pão Quente ME (fictícia, CNPJ alfanumérico)",
-                "Monitoramento eletrônico de alarme — mês de referência {mes_anterior}", CamposVariaveis.Nenhum, [null, 153.00m, 153.00m]),
+                "Monitoramento eletrônico de alarme — mês de referência {mes_referencia}", CamposVariaveis.Nenhum, [null, 153.00m, 153.00m]),
             new("Instituto Saber — monitoramento", "56789012000100", "Instituto Saber (fictício)",
-                "Monitoramento eletrônico de alarme e CFTV — {mes_anterior}", CamposVariaveis.Descricao, [null, null, 220.00m]),
+                "Monitoramento eletrônico de alarme e CFTV — {mes_ano_referencia}", CamposVariaveis.Descricao, [null, null, 220.00m]),
             new("Loja Antiga — contrato encerrado", "67890123000116", "Loja Antiga Comércio Ltda (fictícia)",
-                "Monitoramento eletrônico de alarme — {competencia_anterior}", CamposVariaveis.Nenhum, [180.00m, 180.00m, null], Ativa: false),
+                "Monitoramento eletrônico de alarme — referência {referencia}", CamposVariaveis.Nenhum, [180.00m, 180.00m, null], Ativa: false),
         ];
 
         var recorrencias = clientes.Select(c => new Recorrencia
@@ -95,6 +97,7 @@ public static class SemeadorDemo
                 InformacoesComplementares = c.Info,
             },
             CamposVariaveis = c.Variaveis,
+            ReferenciaServico = c.Referencia,
             Observacoes = "Cadastro fictício de demonstração. Códigos fiscais a confirmar com o contador.",
             CriadaEm = agora,
             AtualizadaEm = agora,
@@ -120,7 +123,10 @@ public static class SemeadorDemo
                 nota.Valor = valor;
                 nota.CamposRevisados = nota.CamposVariaveis;
                 if (clientes[i].Info is not null)
-                    nota.Servico = nota.Servico with { InformacoesComplementares = $"Pedido de compra nº {4500 + m}" };
+                {
+                    nota.InformacoesComplementaresModelo = $"Pedido de compra nº {4500 + m}";
+                    Servicos.CompetenciaServico.ResolverTextos(nota, comp.Ano, comp.Mes);
+                }
                 db.Notas.Add(nota);
 
                 // Último mês: uma linha ignorada, para demonstrar a situação.

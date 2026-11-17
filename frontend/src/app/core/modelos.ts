@@ -55,6 +55,7 @@ export type RegimeEspecialTributacao =
   | 'NotarioOuRegistrador'
   | 'ProfissionalAutonomo'
   | 'SociedadeDeProfissionais';
+export type ReferenciaServico = 'MesAnterior' | 'MesmoMes';
 export type RegraDataCompetencia = 'NaoDefinida' | 'UltimoDiaDoMes' | 'PrimeiroDiaDoMes' | 'DataDaEmissao';
 export type TributacaoIssqn =
   | 'NaoInformado'
@@ -133,6 +134,7 @@ export interface RecorrenciaResumo {
   tomadorDocumento: string;
   descricao: string;
   camposVariaveis: CamposVariaveisTexto;
+  referenciaServico: ReferenciaServico;
   atualizadaEm: string;
 }
 
@@ -140,6 +142,7 @@ export interface HistoricoRecorrencia {
   notaId: number;
   ano: number;
   mes: number;
+  mesReferencia: string;
   valor: number | null;
   situacao: SituacaoNota;
   numeroNfse: string | null;
@@ -153,6 +156,7 @@ export interface Recorrencia {
   tomador: DadosTomador;
   servico: DadosServico;
   camposVariaveis: CamposVariaveisTexto;
+  referenciaServico: ReferenciaServico;
   observacoes: string | null;
   criadaEm: string;
   atualizadaEm: string;
@@ -183,6 +187,8 @@ export interface Linha {
   tomadorNome: string;
   tomadorDocumento: string;
   descricao: string;
+  /** Mês de referência do serviço (AAAA-MM-01); o mês de emissão é o da página. */
+  mesReferencia: string;
   valor: number | null;
   valorAnterior: ValorAnterior | null;
   situacao: SituacaoNota;
@@ -259,6 +265,7 @@ export interface Dps {
   dataCompetencia: string;
   competenciaAno: number;
   competenciaMes: number;
+  mesReferenciaServico: string | null;
   confirmadaEm: string;
   prestador: {
     cnpj: string;
@@ -285,6 +292,7 @@ export interface NotaDetalhe {
   servico: DadosServico;
   camposVariaveis: CamposVariaveisTexto;
   camposPendentesRevisao: CamposVariaveisTexto;
+  mesReferencia: string;
   valor: number | null;
   valorAnterior: ValorAnterior | null;
   situacao: SituacaoNota;

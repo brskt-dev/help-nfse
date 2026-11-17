@@ -12,6 +12,12 @@
     font-size: 22px;
     font-weight: 600;
   }
+  .caption {
+    margin-left: -4px;
+    border: 1px solid var(--borda);
+    border-radius: 999px;
+    padding: 1px 8px;
+  }
   .espaco {
     flex: 1;
   }

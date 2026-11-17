@@ -17,7 +17,15 @@ public sealed class OpcoesEmissao
     /// <summary>Tempo máximo de uma chamada ao provedor. Ao estourar, o resultado é tratado como incerto.</summary>
     public TimeSpan TimeoutProvedor { get; set; } = TimeSpan.FromSeconds(30);
 
-    /// <summary>Quantidade de falhas temporárias (com certeza de não processamento) antes de marcar Erro.</summary>
+    /// <summary>
+    /// Reenvio automático após erro. Padrão: desligado (decisão do usuário: reenvio manual por enquanto).
+    /// Desligado: falha temporária vai direto para Erro; e, após resultado incerto, se a consulta confirmar que a
+    /// nota NÃO existe, a linha vai para Erro para o usuário reenviar. As consultas de reconciliação continuam
+    /// automáticas (não reenviam nada).
+    /// </summary>
+    public bool ReenvioAutomatico { get; set; }
+
+    /// <summary>Com reenvio automático: falhas temporárias antes de marcar Erro.</summary>
     public int MaxFalhasTemporarias { get; set; } = 4;
 
     // Observação: listas sem valor padrão na propriedade, pois o binder de configuração acrescentaria aos itens existentes.

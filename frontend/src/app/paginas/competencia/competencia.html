@@ -8,6 +8,7 @@
       <span class="mes-titulo">{{ titulo() }}</span>
       <mat-icon iconPositionEnd>expand_more</mat-icon>
     </button>
+    <span class="caption suave pequeno" matTooltip="O app organiza as notas pelo mês em que são emitidas. O mês do serviço prestado fica em cada linha.">mês de emissão</span>
     <button mat-icon-button (click)="irPara(1)" matTooltip="Próximo mês" aria-label="Próximo mês">
       <mat-icon>chevron_right</mat-icon>
     </button>
@@ -16,7 +17,7 @@
     }
     <span class="espaco"></span>
     @if (comp()?.aberta) {
-      <span class="suave pequeno">Total da competência (sem ignoradas): <strong>{{ brl(total()) }}</strong></span>
+      <span class="suave pequeno">Total do mês (sem ignoradas): <strong>{{ brl(total()) }}</strong></span>
     }
   </div>
 
@@ -39,7 +40,7 @@
           </button>
         }
       </div>
-      <div class="suave pequeno legenda"><span class="ponto"></span> competência já aberta</div>
+      <div class="suave pequeno legenda"><span class="ponto"></span> mês já aberto</div>
     </div>
   </mat-menu>
 
@@ -54,13 +55,13 @@
     @if (!c.aberta) {
       <div class="cartao vazio">
         <mat-icon class="grande">event_note</mat-icon>
-        <h2>A competência {{ titulo() }} ainda não foi aberta</h2>
+        <h2>O mês de emissão {{ titulo() }} ainda não foi aberto</h2>
         <p class="suave">
           Ao abrir, serão geradas {{ c.recorrenciasAtivas }} linha(s) a partir das recorrências ativas, todas como
           <strong>Pendente</strong> e <strong>sem valor</strong>. Nenhum valor é copiado automaticamente.
         </p>
         <button mat-flat-button (click)="abrir()" [disabled]="ocupado()">
-          <mat-icon>add_task</mat-icon> Abrir competência
+          <mat-icon>add_task</mat-icon> Abrir mês
         </button>
       </div>
     } @else {
@@ -167,6 +168,7 @@
                 </td>
                 <td data-rotulo="Descrição" class="descricao">
                   <span [matTooltip]="l.descricao" matTooltipShowDelay="400">{{ l.descricao }}</span>
+                  <div class="pequeno suave">serviço: {{ mesAno(l.mesReferencia) }}</div>
                 </td>
                 <td data-rotulo="Valor anterior" class="num">
                   @if (l.valorAnterior; as va) {
@@ -176,7 +178,7 @@
                         <span class="suave pequeno">{{ mesCurto(va.ano, va.mes) }}</span>
                       </span>
                       @if (editavel(l) && l.valor !== va.valor) {
-                        <button mat-icon-button class="mini" (click)="copiarAnterior(l)" [matTooltip]="'Usar ' + brl(va.valor) + ' nesta competência'" [attr.aria-label]="'Usar valor anterior em ' + l.tomadorNome">
+                        <button mat-icon-button class="mini" (click)="copiarAnterior(l)" [matTooltip]="'Usar ' + brl(va.valor) + ' neste mês'" [attr.aria-label]="'Usar valor anterior em ' + l.tomadorNome">
                           <mat-icon>arrow_forward</mat-icon>
                         </button>
                       }
@@ -230,7 +232,7 @@
               </tr>
             } @empty {
               <tr>
-                <td colspan="7" class="suave sem-linhas">Nenhuma linha {{ filtro() || busca() ? 'para o filtro atual' : 'nesta competência' }}.</td>
+                <td colspan="7" class="suave sem-linhas">Nenhuma linha {{ filtro() || busca() ? 'para o filtro atual' : 'neste mês' }}.</td>
               </tr>
             }
           </tbody>
@@ -249,8 +251,11 @@
         <button mat-menu-item (click)="copiarAnterior(l)"><mat-icon>content_copy</mat-icon> Copiar valor anterior</button>
       }
     }
-    @if (l.situacao === 'Pendente' || l.situacao === 'Erro') {
+    @if (l.situacao === 'Pendente') {
       <button mat-menu-item (click)="marcarProntas(l)"><mat-icon>task_alt</mat-icon> Marcar como pronta</button>
+    }
+    @if (l.situacao === 'Erro') {
+      <button mat-menu-item (click)="marcarProntas(l)"><mat-icon>replay</mat-icon> Preparar reenvio (marcar como pronta)</button>
     }
     @if (l.situacao === 'Pronta') {
       <button mat-menu-item (click)="voltarPendente(l)"><mat-icon>undo</mat-icon> Voltar para pendente</button>

@@ -1,4 +1,4 @@
-import { Component, DestroyRef, inject, OnInit, signal } from '@angular/core';
+import { Component, computed, DestroyRef, inject, OnInit, signal } from '@angular/core';
 import { FormBuilder, FormGroup, ReactiveFormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MAT_DIALOG_DATA, MatDialogModule } from '@angular/material/dialog';
@@ -10,7 +10,18 @@ import { MatSelectModule } from '@angular/material/select';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { MatTabsModule } from '@angular/material/tabs';
 import { Api } from '../../core/api';
-import { brl, dataBr, dataHoraBr, documento, mensagemErro, mesCurto, textoParaValor, valorParaTexto } from '../../core/formato';
+import {
+  brl,
+  dataBr,
+  dataHoraBr,
+  documento,
+  mensagemErro,
+  mesAnoIso,
+  mesCurto,
+  opcoesMesReferencia,
+  textoParaValor,
+  valorParaTexto,
+} from '../../core/formato';
 import { CenarioSimulacao, Endereco, NotaDetalhe, Tentativa, temCampo } from '../../core/modelos';
 import { CENARIOS, OPCOES_TRIBUTACAO, ROTULO_RESULTADO, ROTULO_STATUS_TRABALHO } from '../../core/rotulos';
 import { CamposServico, CamposTomador, formServico, formTomador, limpar } from '../../compartilhado/formularios';
@@ -58,6 +69,11 @@ export class NotaDetalheDialog implements OnInit {
   protected readonly dataHora = dataHoraBr;
   protected readonly data_ = dataBr;
   protected readonly mesCurto = mesCurto;
+  protected readonly mesAno = mesAnoIso;
+  protected readonly opcoesMes = computed(() => {
+    const n = this.nota();
+    return n ? opcoesMesReferencia(n.ano, n.mes) : [];
+  });
   protected readonly temCampo = temCampo;
 
   private timer: ReturnType<typeof setTimeout> | undefined;
@@ -90,6 +106,7 @@ export class NotaDetalheDialog implements OnInit {
     }
     this.form = this.fb.group({
       valor: [valorParaTexto(n.valor)],
+      mesReferencia: [n.mesReferencia],
       descricao: [n.servico.descricao],
       informacoesComplementares: [n.servico.informacoesComplementares ?? ''],
       cenarioSimulacao: [n.cenarioSimulacao as CenarioSimulacao],
@@ -159,6 +176,7 @@ export class NotaDetalheDialog implements OnInit {
       .atualizarNota(n.id, {
         versao: n.versao,
         valor,
+        mesReferencia: v.mesReferencia,
         descricao: !avulsa && this.variavel('Descricao') ? v.descricao : null,
         informacoesComplementares: !avulsa && this.variavel('InformacoesComplementares') ? v.informacoesComplementares ?? '' : null,
         cenarioSimulacao: v.cenarioSimulacao,

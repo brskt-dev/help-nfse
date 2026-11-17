@@ -40,31 +40,37 @@ public static class Formatos
 }
 
 /// <summary>
-/// Substitui marcadores simples na descrição padrão de uma recorrência ao gerar a linha da competência.
-/// {competencia} → 11/2026 · {mes_ano} → novembro/2026 · {mes} → novembro · {ano} → 2026 ·
-/// {mes_anterior} → outubro · {competencia_anterior} → 10/2026.
-/// Marcador escrito em MAIÚSCULAS gera o texto em maiúsculas (ex.: {MES_ANTERIOR} → OUTUBRO).
+/// Substitui marcadores na descrição/informações complementares ao gerar ou ajustar uma linha.
+/// Mês de referência do serviço: {mes_referencia} → outubro · {mes_ano_referencia} → outubro/2026 · {referencia} → 10/2026.
+/// Mês de emissão: {mes} → novembro · {mes_ano} → novembro/2026 · {competencia} → 11/2026 · {ano} → 2026.
+/// Mês anterior ao de emissão: {mes_anterior} → outubro · {competencia_anterior} → 10/2026.
+/// Marcador escrito em MAIÚSCULAS gera o texto em maiúsculas (ex.: {MES_REFERENCIA} → OUTUBRO).
 /// </summary>
 public static partial class ModeloDescricao
 {
-    public static readonly string[] Marcadores =
-        ["{competencia}", "{mes_ano}", "{mes}", "{ano}", "{mes_anterior}", "{competencia_anterior}"];
-
-    [System.Text.RegularExpressions.GeneratedRegex(@"\{(competencia_anterior|competencia|mes_ano|mes_anterior|mes|ano)\}",
+    [System.Text.RegularExpressions.GeneratedRegex(
+        @"\{(mes_ano_referencia|mes_referencia|referencia|competencia_anterior|competencia|mes_ano|mes_anterior|mes|ano)\}",
         System.Text.RegularExpressions.RegexOptions.IgnoreCase)]
     private static partial System.Text.RegularExpressions.Regex Marcador();
 
-    public static string Aplicar(string modelo, int ano, int mes)
+    public static DateOnly Referencia(Dominio.ReferenciaServico padrao, int anoEmissao, int mesEmissao) =>
+        padrao == Dominio.ReferenciaServico.MesmoMes ? new DateOnly(anoEmissao, mesEmissao, 1) : new DateOnly(anoEmissao, mesEmissao, 1).AddMonths(-1);
+
+    public static string? Aplicar(string? modelo, int anoEmissao, int mesEmissao, DateOnly referencia)
     {
-        var anterior = new DateOnly(ano, mes, 1).AddMonths(-1);
+        if (modelo is null) return null;
+        var anterior = new DateOnly(anoEmissao, mesEmissao, 1).AddMonths(-1);
         return Marcador().Replace(modelo, m =>
         {
             var valor = m.Groups[1].Value.ToLowerInvariant() switch
             {
-                "competencia" => $"{mes:00}/{ano}",
-                "mes_ano" => Formatos.MesAno(ano, mes),
-                "mes" => Formatos.NomeMes(mes),
-                "ano" => ano.ToString(CultureInfo.InvariantCulture),
+                "mes_referencia" => Formatos.NomeMes(referencia.Month),
+                "mes_ano_referencia" => Formatos.MesAno(referencia.Year, referencia.Month),
+                "referencia" => $"{referencia.Month:00}/{referencia.Year}",
+                "competencia" => $"{mesEmissao:00}/{anoEmissao}",
+                "mes_ano" => Formatos.MesAno(anoEmissao, mesEmissao),
+                "mes" => Formatos.NomeMes(mesEmissao),
+                "ano" => anoEmissao.ToString(CultureInfo.InvariantCulture),
                 "mes_anterior" => Formatos.NomeMes(anterior.Month),
                 "competencia_anterior" => $"{anterior.Month:00}/{anterior.Year}",
                 _ => m.Value,
@@ -74,3 +80,4 @@ public static partial class ModeloDescricao
         });
     }
 }
+

@@ -19,7 +19,7 @@ import { AlterarSenhaDialog } from './alterar-senha';
       <a class="marca" [routerLink]="linkAtual()">help-nfse</a>
       <nav class="links">
         <a mat-button [routerLink]="linkAtual()" routerLinkActive="ativo" [routerLinkActiveOptions]="{ exact: false }">
-          <mat-icon>calendar_month</mat-icon> Competência atual
+          <mat-icon>calendar_month</mat-icon> Mês atual
         </a>
         <a mat-button routerLink="/recorrencias" routerLinkActive="ativo"><mat-icon>repeat</mat-icon> Recorrências</a>
         <a mat-button routerLink="/historico" routerLinkActive="ativo"><mat-icon>history</mat-icon> Histórico</a>
@@ -38,7 +38,7 @@ import { AlterarSenhaDialog } from './alterar-senha';
       </button>
       <mat-menu #menu="matMenu">
         <div class="menu-usuario suave pequeno">{{ auth.sessao()?.email }}</div>
-        <a mat-menu-item class="so-movel" [routerLink]="linkAtual()"><mat-icon>calendar_month</mat-icon> Competência atual</a>
+        <a mat-menu-item class="so-movel" [routerLink]="linkAtual()"><mat-icon>calendar_month</mat-icon> Mês atual</a>
         <a mat-menu-item class="so-movel" routerLink="/recorrencias"><mat-icon>repeat</mat-icon> Recorrências</a>
         <a mat-menu-item class="so-movel" routerLink="/historico"><mat-icon>history</mat-icon> Histórico</a>
         <a mat-menu-item class="so-movel" routerLink="/emissor"><mat-icon>store</mat-icon> Emissor</a>

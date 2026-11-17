@@ -22,7 +22,9 @@ simulado** ("SIMULAÇÃO — SEM VALIDADE FISCAL"); não há caminho funcional p
 - A tentativa de envio é gravada **antes** de chamar o provedor; nunca reenviar uma DPS cujo último envio não
   tem resultado conclusivo sem antes consultar (`ProcessadorEmissao.PrecisaReconciliar`).
 - O número/identificador da DPS é atribuído uma única vez por nota e reutilizado.
-- Linhas da competência guardam cópia dos dados; o cadastro nunca altera meses existentes automaticamente.
+- Linhas do mês guardam cópia dos dados; o cadastro nunca altera meses existentes automaticamente.
+- O mês navegado no app (`Competencia`) é o **mês de emissão**; o mês do serviço é `Nota.MesReferencia`.
+- Reenvio após erro é **manual** (`Emissao__ReenvioAutomatico=false`); consultas de reconciliação são automáticas.
 - Não inventar regras fiscais nem endpoints da NFS-e Nacional: consultar a documentação oficial (ver
   `docs/pendencias-homologacao.md`).
 - Certificado A1 e senhas só por secret do servidor; nunca no Git nem em logs.

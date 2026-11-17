@@ -68,12 +68,16 @@ notas técnicas e a documentação das APIs. Não usar endpoints de memória e n
       comportamento real do serviço.
 - [ ] Revisar a licença do QuestPDF para o porte do cliente (Community: receita bruta anual < US$ 1 milhão).
 
-## 4. Regras de negócio a confirmar com o usuário
+## 4. Regras de negócio
 
-- [ ] **"Competência" no help-nfse = mês de emissão ou mês de referência do serviço?** Nas notas de exemplo,
-      os serviços de outubro são faturados em novembro. Há duas formas de uso: abrir "novembro" e usar
-      `{MES_ANTERIOR}` na descrição, ou abrir "outubro" e emitir em novembro com a regra "Data da emissão".
-- [ ] Após confirmar que uma nota com resultado incerto **não** foi emitida, o sistema reenvia sozinho (mesmo
-      identificador, após a janela mínima). Confirmar se o usuário prefere aprovar esse reenvio manualmente.
-- [ ] Outros campos variáveis por competência além de descrição e informações complementares (ex.:
-      desconto, vencimento).
+Decididas pelo usuário:
+
+- [x] O mês navegado no app é o **mês de emissão** (quando a nota sai); o **mês do serviço** é um dado de cada
+      nota, que pode ser outro. A exibição e o histórico são por mês de emissão.
+- [x] **Reenvio manual** em caso de erro, por enquanto (`Emissao__ReenvioAutomatico=false`).
+
+Em aberto:
+
+- [ ] Outros campos variáveis por mês além de descrição e informações complementares (ex.: desconto,
+      vencimento).
+- [ ] Relação entre o mês do serviço e a data de competência da DPS (item da seção 1, com o contador).

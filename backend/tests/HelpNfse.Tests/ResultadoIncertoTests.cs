@@ -33,34 +33,65 @@ public class ResultadoIncertoTests(PostgresServidor servidor) : TesteComBanco(se
     }
 
     [Fact]
-    public async Task Timeout_sem_emissao_so_reenvia_depois_de_consulta_confirmar_inexistencia_fora_da_janela()
+    public async Task Timeout_sem_emissao_vai_para_erro_apos_consulta_e_reenvio_e_manual_com_o_mesmo_identificador()
     {
         var (compId, notas) = await A.PrepararProntasAsync(1, cenario: CenarioSimulacao.TimeoutNaoEmitida);
         await A.SolicitarEmissaoAsync(compId);
         await A.ProcessarDisponiveisAsync();
 
-        // Primeira consulta: ainda dentro da janela mínima → não reenvia.
+        // Consulta dentro da janela mínima: ainda não conclui nada.
         A.Relogio.Avancar(TimeSpan.FromSeconds(31));
         await A.ProcessarDisponiveisAsync();
-        var dentroDaJanela = await A.NotaAsync(notas[0]);
-        Assert.Equal(SituacaoNota.ResultadoAConfirmar, dentroDaJanela.Situacao);
+        Assert.Equal(SituacaoNota.ResultadoAConfirmar, (await A.NotaAsync(notas[0])).Situacao);
+
+        // Após a janela: inexistência confirmada → Erro, sem reenvio automático.
+        A.Relogio.Avancar(Ambiente.JanelaReenvio);
+        await A.ProcessarDisponiveisAsync();
+        A.Relogio.Avancar(TimeSpan.FromMinutes(10));
+        await A.ProcessarDisponiveisAsync();
+        var erro = await A.NotaAsync(notas[0]);
+        Assert.Equal(SituacaoNota.Erro, erro.Situacao);
+        Assert.Contains("NÃO foi emitida", erro.UltimaMensagem);
         Assert.Equal(1, await A.ChamadasEnvioSimuladorAsync(notas[0]));
 
-        // Após a janela: consulta confirma inexistência e só então reenvia (mesmo identificador).
-        A.Relogio.Avancar(Ambiente.JanelaReenvio);
+        // Reenvio manual: marcar como pronta e emitir de novo.
+        await A.MarcarProntasAsync(notas[0]);
+        await A.SolicitarEmissaoAsync(compId);
         await A.ProcessarDisponiveisAsync();
 
         var nota = await A.NotaAsync(notas[0]);
         Assert.Equal(SituacaoNota.Emitida, nota.Situacao);
-        var seq = nota.Tentativas.OrderBy(t => t.Sequencia).Select(t => (t.Tipo, t.Resultado)).ToList();
         Assert.Equal([
             (TipoTentativa.Envio, ResultadoTentativa.Incerta),
             (TipoTentativa.Consulta, ResultadoTentativa.NaoEncontrada),
             (TipoTentativa.Consulta, ResultadoTentativa.NaoEncontrada),
             (TipoTentativa.Envio, ResultadoTentativa.Autorizada),
-        ], seq);
+        ], nota.Tentativas.OrderBy(t => t.Sequencia).Select(t => (t.Tipo, t.Resultado)).ToList());
         Assert.Single(nota.Tentativas.Select(t => t.IdentificadorDps).Distinct());
-        Assert.Equal(2, await A.ChamadasEnvioSimuladorAsync(notas[0]));
+        Assert.Equal(erro.NumeroDps, nota.NumeroDps);
+    }
+
+    [Fact]
+    public async Task Falha_temporaria_vai_para_erro_sem_reenvio_automatico_e_reenvio_manual_conclui()
+    {
+        var (compId, notas) = await A.PrepararProntasAsync(1, cenario: CenarioSimulacao.FalhaTemporaria);
+        await A.SolicitarEmissaoAsync(compId);
+        await A.ProcessarDisponiveisAsync();
+
+        var erro = await A.NotaAsync(notas[0]);
+        Assert.Equal(SituacaoNota.Erro, erro.Situacao);
+        Assert.Contains("Nenhuma nota foi emitida", erro.UltimaMensagem);
+        A.Relogio.Avancar(TimeSpan.FromHours(1));
+        Assert.Equal(0, await A.ProcessarDisponiveisAsync());
+
+        await A.MarcarProntasAsync(notas[0]);
+        await A.SolicitarEmissaoAsync(compId);
+        await A.ProcessarDisponiveisAsync();
+
+        var nota = await A.NotaAsync(notas[0]);
+        Assert.Equal(SituacaoNota.Emitida, nota.Situacao);
+        Assert.Equal([ResultadoTentativa.FalhaTemporaria, ResultadoTentativa.Autorizada],
+            nota.Tentativas.OrderBy(t => t.Sequencia).Select(t => t.Resultado));
     }
 
     [Fact]
@@ -119,42 +150,6 @@ public class ResultadoIncertoTests(PostgresServidor servidor) : TesteComBanco(se
     }
 
     [Fact]
-    public async Task Falha_temporaria_reenvia_com_espera_e_conclui()
-    {
-        var (compId, notas) = await A.PrepararProntasAsync(1, cenario: CenarioSimulacao.FalhaTemporaria);
-        await A.SolicitarEmissaoAsync(compId);
-
-        for (var i = 0; i < 3; i++)
-        {
-            await A.ProcessarDisponiveisAsync();
-            A.Relogio.Avancar(TimeSpan.FromSeconds(11));
-        }
-
-        var nota = await A.NotaAsync(notas[0]);
-        Assert.Equal(SituacaoNota.Emitida, nota.Situacao);
-        Assert.Equal([ResultadoTentativa.FalhaTemporaria, ResultadoTentativa.FalhaTemporaria, ResultadoTentativa.Autorizada],
-            nota.Tentativas.OrderBy(t => t.Sequencia).Select(t => t.Resultado));
-    }
-
-    [Fact]
-    public async Task Falha_temporaria_persistente_vira_erro_conhecido()
-    {
-        var (compId, notas) = await A.PrepararProntasAsync(1, cenario: CenarioSimulacao.FalhaTemporariaPersistente);
-        await A.SolicitarEmissaoAsync(compId);
-
-        for (var i = 0; i < 5; i++)
-        {
-            await A.ProcessarDisponiveisAsync();
-            A.Relogio.Avancar(TimeSpan.FromSeconds(11));
-        }
-
-        var nota = await A.NotaAsync(notas[0]);
-        Assert.Equal(SituacaoNota.Erro, nota.Situacao);
-        Assert.Equal(3, nota.Tentativas.Count);
-        Assert.Contains("Nenhuma nota foi emitida", nota.UltimaMensagem);
-    }
-
-    [Fact]
     public async Task Rejeicao_vira_erro_e_pode_ser_corrigida_preservando_o_historico()
     {
         var (compId, notas) = await A.PrepararProntasAsync(1, cenario: CenarioSimulacao.RejeicaoFiscal);
@@ -197,5 +192,74 @@ public class ResultadoIncertoTests(PostgresServidor servidor) : TesteComBanco(se
             (TipoTentativa.Envio, ResultadoTentativa.Incerta), (TipoTentativa.Consulta, ResultadoTentativa.ConsultaIndisponivel))));
         Assert.False(ProcessadorEmissao.PrecisaReconciliar(NotaCom(
             (TipoTentativa.Envio, ResultadoTentativa.Incerta), (TipoTentativa.Consulta, ResultadoTentativa.NaoEncontrada))));
+    }
+}
+
+/// <summary>Política opcional de reenvio automático (Emissao:ReenvioAutomatico=true), desligada por padrão.</summary>
+public class ReenvioAutomaticoTests(PostgresServidor servidor) : TesteComBanco(servidor)
+{
+    protected override Dictionary<string, string?>? Configuracao => new() { ["Emissao:ReenvioAutomatico"] = "true" };
+
+    [Fact]
+    public async Task Timeout_sem_emissao_so_reenvia_depois_de_consulta_confirmar_inexistencia_fora_da_janela()
+    {
+        var (compId, notas) = await A.PrepararProntasAsync(1, cenario: CenarioSimulacao.TimeoutNaoEmitida);
+        await A.SolicitarEmissaoAsync(compId);
+        await A.ProcessarDisponiveisAsync();
+
+        A.Relogio.Avancar(TimeSpan.FromSeconds(31));
+        await A.ProcessarDisponiveisAsync();
+        Assert.Equal(SituacaoNota.ResultadoAConfirmar, (await A.NotaAsync(notas[0])).Situacao);
+        Assert.Equal(1, await A.ChamadasEnvioSimuladorAsync(notas[0]));
+
+        A.Relogio.Avancar(Ambiente.JanelaReenvio);
+        await A.ProcessarDisponiveisAsync();
+
+        var nota = await A.NotaAsync(notas[0]);
+        Assert.Equal(SituacaoNota.Emitida, nota.Situacao);
+        Assert.Equal([
+            (TipoTentativa.Envio, ResultadoTentativa.Incerta),
+            (TipoTentativa.Consulta, ResultadoTentativa.NaoEncontrada),
+            (TipoTentativa.Consulta, ResultadoTentativa.NaoEncontrada),
+            (TipoTentativa.Envio, ResultadoTentativa.Autorizada),
+        ], nota.Tentativas.OrderBy(t => t.Sequencia).Select(t => (t.Tipo, t.Resultado)).ToList());
+        Assert.Single(nota.Tentativas.Select(t => t.IdentificadorDps).Distinct());
+        Assert.Equal(2, await A.ChamadasEnvioSimuladorAsync(notas[0]));
+    }
+
+    [Fact]
+    public async Task Falha_temporaria_reenvia_com_espera_e_conclui()
+    {
+        var (compId, notas) = await A.PrepararProntasAsync(1, cenario: CenarioSimulacao.FalhaTemporaria);
+        await A.SolicitarEmissaoAsync(compId);
+
+        for (var i = 0; i < 2; i++)
+        {
+            await A.ProcessarDisponiveisAsync();
+            A.Relogio.Avancar(TimeSpan.FromSeconds(11));
+        }
+
+        var nota = await A.NotaAsync(notas[0]);
+        Assert.Equal(SituacaoNota.Emitida, nota.Situacao);
+        Assert.Equal([ResultadoTentativa.FalhaTemporaria, ResultadoTentativa.Autorizada],
+            nota.Tentativas.OrderBy(t => t.Sequencia).Select(t => t.Resultado));
+    }
+
+    [Fact]
+    public async Task Falha_temporaria_persistente_vira_erro_apos_o_limite()
+    {
+        var (compId, notas) = await A.PrepararProntasAsync(1, cenario: CenarioSimulacao.FalhaTemporariaPersistente);
+        await A.SolicitarEmissaoAsync(compId);
+
+        for (var i = 0; i < 5; i++)
+        {
+            await A.ProcessarDisponiveisAsync();
+            A.Relogio.Avancar(TimeSpan.FromSeconds(11));
+        }
+
+        var nota = await A.NotaAsync(notas[0]);
+        Assert.Equal(SituacaoNota.Erro, nota.Situacao);
+        Assert.Equal(3, nota.Tentativas.Count);
+        Assert.Contains("Nenhuma nota foi emitida", nota.UltimaMensagem);
     }
 }

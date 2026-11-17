@@ -41,6 +41,7 @@ public static class ConstrutorDps
             DataCompetencia = CalcularDataCompetencia(emissor.RegraDataCompetencia, comp.Ano, comp.Mes, agoraUtc),
             CompetenciaAno = comp.Ano,
             CompetenciaMes = comp.Mes,
+            MesReferenciaServico = nota.MesReferencia,
             ConfirmadaEm = agoraUtc,
             Prestador = prestador,
             Tomador = nota.Tomador.Copiar(),

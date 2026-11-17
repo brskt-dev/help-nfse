@@ -38,6 +38,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options)
         builder.Properties<RegimeEspecialTributacao>().HaveConversion<string>().HaveMaxLength(40);
         builder.Properties<RegraDataCompetencia>().HaveConversion<string>().HaveMaxLength(30);
         builder.Properties<TributacaoIssqn>().HaveConversion<string>().HaveMaxLength(30);
+        builder.Properties<ReferenciaServico>().HaveConversion<string>().HaveMaxLength(20);
         builder.Properties<decimal>().HavePrecision(15, 2);
     }
 
@@ -89,6 +90,8 @@ public class AppDbContext(DbContextOptions<AppDbContext> options)
             e.Property(x => x.CamposVariaveis).HasConversion<int>();
             e.Property(x => x.CamposRevisados).HasConversion<int>();
             e.Property(x => x.MotivoIgnorada).HasMaxLength(300);
+            e.Property(x => x.DescricaoModelo).HasMaxLength(2000);
+            e.Property(x => x.InformacoesComplementaresModelo).HasMaxLength(2000);
             e.Property(x => x.SerieDps).HasMaxLength(5);
             e.Property(x => x.IdentificadorDps).HasMaxLength(80);
             e.Property(x => x.DpsJson).HasColumnType("jsonb");

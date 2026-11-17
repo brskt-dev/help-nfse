@@ -12,7 +12,7 @@ import { MatInputModule } from '@angular/material/input';
     <h2 mat-dialog-title>Ignorar neste mês</h2>
     <mat-dialog-content>
       <p>
-        {{ data.nome ? data.nome : data.quantidade + ' linha(s)' }} não será(ão) emitida(s) nesta competência.
+        {{ data.nome ? data.nome : data.quantidade + ' linha(s)' }} não será(ão) emitida(s) neste mês.
         A recorrência continua ativa para os próximos meses e a linha pode ser restaurada.
       </p>
       <mat-form-field style="width: 100%">

@@ -3,7 +3,8 @@
     <div>
       <div class="titulo">{{ n.tomador.nome }}</div>
       <div class="suave pequeno">
-        {{ n.identificacao }} · competência {{ mesCurto(n.ano, n.mes) }} · {{ n.origem === 'Avulsa' ? 'nota avulsa' : 'recorrência' }}
+        {{ n.identificacao }} · emissão {{ mesCurto(n.ano, n.mes) }} · serviço {{ mesAno(n.mesReferencia) }} ·
+        {{ n.origem === 'Avulsa' ? 'nota avulsa' : 'recorrência' }}
       </div>
     </div>
     <app-situacao [situacao]="n.situacao" />
@@ -19,6 +20,9 @@
         <mat-icon>{{ n.situacao === 'Erro' ? 'error' : 'info' }}</mat-icon>
         <div>
           {{ n.mensagem }}
+          @if (n.situacao === 'Erro') {
+            <div class="pequeno">Nenhum reenvio é automático. Para tentar de novo: corrija o que for preciso, marque como pronta e use "Emitir notas prontas".</div>
+          }
           @if (n.situacao === 'ResultadoAConfirmar') {
             <div class="pequeno">
               Enquanto o resultado não for confirmado, a nota não pode ser editada nem reenviada.
@@ -50,7 +54,7 @@
       <mat-tab label="Dados">
         @if (form; as f) {
           <form [formGroup]="f" (ngSubmit)="salvar()" class="edicao">
-            <h3>Campos desta competência</h3>
+            <h3>Campos deste mês</h3>
             <div class="grade-form">
               <mat-form-field>
                 <mat-label>Valor (R$)</mat-label>
@@ -58,6 +62,15 @@
                 @if (n.valorAnterior; as va) {
                   <mat-hint>Competência anterior ({{ mesCurto(va.ano, va.mes) }}): {{ brl(va.valor) }}</mat-hint>
                 }
+              </mat-form-field>
+              <mat-form-field>
+                <mat-label>Mês de referência do serviço</mat-label>
+                <mat-select formControlName="mesReferencia">
+                  @for (o of opcoesMes(); track o.valor) {
+                    <mat-option [value]="o.valor">{{ o.rotulo }}</mat-option>
+                  }
+                </mat-select>
+                <mat-hint>A nota é emitida em {{ mesCurto(n.ano, n.mes) }}; o serviço pode ser de outro mês</mat-hint>
               </mat-form-field>
               <mat-form-field>
                 <mat-label>Cenário de simulação</mat-label>
@@ -115,9 +128,11 @@
           <div class="erro-texto pequeno">{{ e }}</div>
         }
 
-        <h3>Dados usados nesta competência</h3>
-        <p class="pequeno suave">Cópia feita na abertura da competência; alterações no cadastro não afetam esta linha.</p>
+        <h3>Dados usados neste mês</h3>
+        <p class="pequeno suave">Cópia feita na abertura do mês; alterações no cadastro não afetam esta linha.</p>
         <dl class="dados">
+          <dt>Mês de emissão / do serviço</dt>
+          <dd>{{ mesCurto(n.ano, n.mes) }} / {{ mesAno(n.mesReferencia) }}</dd>
           <dt>Tomador</dt>
           <dd>{{ n.tomador.nome }} — {{ doc(n.tomador.documento) }}</dd>
           <dt>E-mail</dt>
@@ -231,7 +246,7 @@
             <dd class="quebra">{{ n.identificadorDps }}</dd>
             <dt>Série / número</dt>
             <dd>{{ n.serieDps }} / {{ n.numeroDps }}</dd>
-            <dt>Data de competência</dt>
+            <dt>Data de competência (DPS)</dt>
             <dd>{{ data_(n.dataCompetencia) }}</dd>
             @if (n.dps; as d) {
               <dt>Prestador (congelado)</dt>

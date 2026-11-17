@@ -46,6 +46,7 @@ public sealed record RecorrenciaResumoDto(
     string TomadorDocumento,
     string Descricao,
     CamposVariaveis CamposVariaveis,
+    ReferenciaServico ReferenciaServico,
     DateTimeOffset AtualizadaEm);
 
 public sealed record RecorrenciaDto(
@@ -55,6 +56,7 @@ public sealed record RecorrenciaDto(
     DadosTomador Tomador,
     DadosServico Servico,
     CamposVariaveis CamposVariaveis,
+    ReferenciaServico ReferenciaServico,
     string? Observacoes,
     DateTimeOffset CriadaEm,
     DateTimeOffset AtualizadaEm,
@@ -63,13 +65,14 @@ public sealed record RecorrenciaDto(
     List<HistoricoRecorrenciaDto> Historico);
 
 public sealed record HistoricoRecorrenciaDto(
-    long NotaId, int Ano, int Mes, decimal? Valor, SituacaoNota Situacao, string? NumeroNfse, DateTimeOffset? EmitidaEm);
+    long NotaId, int Ano, int Mes, DateOnly MesReferencia, decimal? Valor, SituacaoNota Situacao, string? NumeroNfse, DateTimeOffset? EmitidaEm);
 
 public sealed record SalvarRecorrenciaDto(
     string Identificacao,
     DadosTomador Tomador,
     DadosServico Servico,
     CamposVariaveis CamposVariaveis,
+    ReferenciaServico ReferenciaServico,
     string? Observacoes,
     uint? Versao);
 
@@ -90,6 +93,7 @@ public sealed record LinhaDto(
     string TomadorNome,
     string TomadorDocumento,
     string Descricao,
+    DateOnly MesReferencia,
     decimal? Valor,
     ValorAnteriorDto? ValorAnterior,
     SituacaoNota Situacao,
@@ -147,6 +151,7 @@ public sealed record NotaDetalheDto(
     DadosServico Servico,
     CamposVariaveis CamposVariaveis,
     CamposVariaveis CamposPendentesRevisao,
+    DateOnly MesReferencia,
     decimal? Valor,
     ValorAnteriorDto? ValorAnterior,
     SituacaoNota Situacao,
@@ -175,6 +180,7 @@ public sealed record NotaDetalheDto(
 public sealed record AtualizarNotaDto(
     uint Versao,
     decimal? Valor,
+    DateOnly? MesReferencia,
     string? Descricao,
     string? InformacoesComplementares,
     CenarioSimulacao? CenarioSimulacao,
@@ -190,7 +196,8 @@ public sealed record CriarAvulsaDto(
     DadosTomador Tomador,
     DadosServico Servico,
     decimal? Valor,
-    CenarioSimulacao? CenarioSimulacao);
+    CenarioSimulacao? CenarioSimulacao,
+    DateOnly? MesReferencia = null);
 
 public sealed record IdsDto(List<long> Ids);
 public sealed record CopiarValorAnteriorDto(List<long> Ids, bool Sobrescrever);

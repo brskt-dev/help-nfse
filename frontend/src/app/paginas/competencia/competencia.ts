@@ -19,6 +19,7 @@ import {
   deslocarMes,
   documento,
   mensagemErro,
+  mesAnoIso,
   mesCurto,
   nomeMes,
   rotuloCompetencia,
@@ -114,6 +115,7 @@ export class CompetenciaPagina {
   protected readonly brl = brl;
   protected readonly doc = documento;
   protected readonly mesCurto = mesCurto;
+  protected readonly mesAno = mesAnoIso;
   protected readonly nomeMes = nomeMes;
   protected readonly rotuloSituacao = ROTULO_SITUACAO;
   protected readonly rotuloCenario = ROTULO_CENARIO;
@@ -336,7 +338,7 @@ export class CompetenciaPagina {
     const c = this.comp();
     if (!c?.id) return;
     this.dialog
-      .open(AvulsaDialog, { data: { competenciaId: c.id, rotulo: this.titulo() }, width: '760px', maxWidth: '100vw', autoFocus: false })
+      .open(AvulsaDialog, { data: { competenciaId: c.id, rotulo: this.titulo(), ano: c.ano, mes: c.mes }, width: '760px', maxWidth: '100vw', autoFocus: false })
       .afterClosed()
       .subscribe((criada) => criada && this.carregar());
   }

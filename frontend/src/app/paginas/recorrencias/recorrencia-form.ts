@@ -5,11 +5,13 @@ import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
+import { MatSelectModule } from '@angular/material/select';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { Router, RouterLink } from '@angular/router';
 import { Api } from '../../core/api';
-import { brl, mensagemErro, mesCurto } from '../../core/formato';
-import { camposParaTexto, Recorrencia, temCampo } from '../../core/modelos';
+import { brl, mensagemErro, mesAnoIso, mesCurto } from '../../core/formato';
+import { OPCOES_REFERENCIA } from '../../core/rotulos';
+import { camposParaTexto, Recorrencia, ReferenciaServico, temCampo } from '../../core/modelos';
 import { CamposServico, CamposTomador, formServico, formTomador, limpar } from '../../compartilhado/formularios';
 import { SituacaoBadge } from '../../compartilhado/situacao';
 
@@ -23,6 +25,7 @@ import { SituacaoBadge } from '../../compartilhado/situacao';
     MatFormFieldModule,
     MatIconModule,
     MatInputModule,
+    MatSelectModule,
     CamposTomador,
     CamposServico,
     SituacaoBadge,
@@ -65,9 +68,20 @@ import { SituacaoBadge } from '../../compartilhado/situacao';
           <app-campos-servico [grupo]="$any(form.get('servico'))" [mostrarMarcadores]="true" />
         </fieldset>
         <fieldset class="secao">
-          <legend>Campos variáveis por competência</legend>
+          <legend>Mês do serviço e campos variáveis</legend>
+          <div class="grade-form">
+            <mat-form-field>
+              <mat-label>Mês de referência do serviço</mat-label>
+              <mat-select [formControl]="$any(form.get('referenciaServico'))">
+                @for (o of opcoesReferencia; track o.valor) {
+                  <mat-option [value]="o.valor">{{ o.rotulo }}</mat-option>
+                }
+              </mat-select>
+              <mat-hint>Padrão das linhas; cada linha pode ser ajustada no mês de emissão</mat-hint>
+            </mat-form-field>
+          </div>
           <p class="pequeno suave">
-            O <strong>valor</strong> é sempre preenchido a cada competência. Marque também os campos que devem ser revisados e podem
+            O <strong>valor</strong> é sempre preenchido a cada mês. Marque também os campos que devem ser revisados e podem
             mudar mês a mês: a linha só poderá ser marcada como pronta depois da revisão.
           </p>
           <div class="checks" [formGroup]="variaveis">
@@ -99,10 +113,10 @@ import { SituacaoBadge } from '../../compartilhado/situacao';
 
       @if (rec(); as r) {
         <fieldset class="secao">
-          <legend>Histórico desta recorrência</legend>
+          <legend>Histórico desta recorrência (por mês de emissão)</legend>
           @for (h of r.historico; track h.notaId) {
             <a class="hist" [routerLink]="['/competencias', h.ano, h.mes]">
-              <span>{{ mesCurto(h.ano, h.mes) }}</span>
+              <span>{{ mesCurto(h.ano, h.mes) }} <span class="suave pequeno">serviço {{ mesAno(h.mesReferencia) }}</span></span>
               <span>{{ brl(h.valor) }}</span>
               <app-situacao [situacao]="h.situacao" />
               <span class="suave pequeno">{{ h.numeroNfse ?? '' }}</span>
@@ -132,7 +146,7 @@ import { SituacaoBadge } from '../../compartilhado/situacao';
     }
     .hist {
       display: grid;
-      grid-template-columns: 90px 140px 180px 1fr;
+      grid-template-columns: 220px 120px 180px 1fr;
       align-items: center;
       gap: 8px;
       padding: 6px 4px;
@@ -156,6 +170,8 @@ export class RecorrenciaFormPagina implements OnInit {
   protected readonly salvando = signal(false);
   protected readonly brl = brl;
   protected readonly mesCurto = mesCurto;
+  protected readonly mesAno = mesAnoIso;
+  protected readonly opcoesReferencia = OPCOES_REFERENCIA;
 
   protected readonly variaveis = this.fb.nonNullable.group({ Descricao: false, InformacoesComplementares: false });
   protected readonly form = this.fb.group({
@@ -163,6 +179,7 @@ export class RecorrenciaFormPagina implements OnInit {
     tomador: formTomador(this.fb),
     servico: formServico(this.fb),
     observacoes: [''],
+    referenciaServico: ['MesAnterior' as ReferenciaServico],
   });
 
   ngOnInit(): void {
@@ -180,7 +197,7 @@ export class RecorrenciaFormPagina implements OnInit {
     this.rec.set(r);
     this.form.setControl('tomador', formTomador(this.fb, r.tomador));
     this.form.setControl('servico', formServico(this.fb, r.servico));
-    this.form.patchValue({ identificacao: r.identificacao, observacoes: r.observacoes ?? '' });
+    this.form.patchValue({ identificacao: r.identificacao, observacoes: r.observacoes ?? '', referenciaServico: r.referenciaServico });
     this.variaveis.setValue({
       Descricao: temCampo(r.camposVariaveis, 'Descricao'),
       InformacoesComplementares: temCampo(r.camposVariaveis, 'InformacoesComplementares'),
@@ -197,6 +214,7 @@ export class RecorrenciaFormPagina implements OnInit {
       tomador: limpar(v.tomador) as never,
       servico: { ...(limpar(v.servico) as object), issRetido: !!(v.servico as { issRetido?: boolean }).issRetido } as never,
       camposVariaveis: camposParaTexto(vars),
+      referenciaServico: (v.referenciaServico ?? 'MesAnterior') as ReferenciaServico,
       observacoes: v.observacoes || null,
       versao: this.rec()?.versao ?? null,
     };
